@@ -1,0 +1,16 @@
+[package]
+name = "sprout"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.79"
+clap = { version = "4.4.18", features = ["derive"] }
+log = "0.4.20"
+rustic_backend = "0.1.1"
+rustic_core = "0.2.0"
+serde = "1.0.196"
+simplelog = "0.12.1"
+tempfile = "3.9.0"
