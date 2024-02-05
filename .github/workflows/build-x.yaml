@@ -1,0 +1,70 @@
+on:
+  push:
+    tags:
+      - 'v*'
+name: Publish
+jobs:
+  build:
+    name: Release - ${{ matrix.platform.target }}
+    if: startsWith( github.ref, 'refs/tags/v' ) || github.ref == 'refs/tags/test-release'
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - release_for: linux-x86_64
+            os: ubuntu-20.04
+            target: x86_64-unknown-linux-musl
+            bin: sprout
+            name: sprout-linux-x86_64.tar.gz
+            command: build
+          - release_for: linux-aarch64
+            os: ubuntu-20.04
+            target: aarch64-unknown-linux-musl
+            bin: sprout
+            name: sprout-linux-aarch64.tar.gz
+            command: build
+          - release_for: macos-x86_64
+            os: macOS-latest
+            target: x86_64-apple-darwin
+            bin: sprout
+            name: sprout-macos-x86_64.tar.gz
+            command: build
+          - release_for: macos-aarch64
+            os: macos-14
+            target: aarch64-apple-darwin
+            bin: sprout
+            name: sprout-macos-aarch64.tar.gz
+            command: build
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Build binary
+        uses: houseabsolute/actions-rust-cross@v0
+        with:
+          command: ${{ matrix.platform.command }}
+          target: ${{ matrix.platform.target }}
+          args: "--locked --release"
+          strip: true
+      - name: Package as archive
+        shell: bash
+        run: |
+          cd target/${{ matrix.platform.target }}/release
+          if [[ "${{ matrix.platform.os }}" == "windows-latest" ]]; then
+            7z a ../../../${{ matrix.platform.name }} ${{ matrix.platform.bin }}
+          else
+            tar czvf ../../../${{ matrix.platform.name }} ${{ matrix.platform.bin }}
+          fi
+          cd -
+      - name: Publish release artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.platform.name }}
+          path: "sprout*"
+        if: startsWith( github.ref, 'refs/tags/v' )
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          files: "sprout*"
+        if: startsWith( github.ref, 'refs/tags/v' )
