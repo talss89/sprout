@@ -46,6 +46,8 @@ impl Project {
             return Err(anyhow::anyhow!("A sprout.yaml already exists!"));
         }
 
+        let path = fs::canonicalize(path).unwrap();
+
         let config = SproutFile {
             name: path.file_name().unwrap().to_string_lossy().into_owned(),
             branch: "main".to_string(),
