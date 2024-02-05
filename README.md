@@ -2,8 +2,6 @@
 
 Fast, deduplicated content and database seeding for WordPress
 
-_Sprout allows you and your team to easily snapshot or pull down entire archives of wp-uploads and database content, in a secure and efficient manner. Easily track seeded content in git, but store your gigabytes of uploads anywhere else._
-
 - Sprout is a statically linked binary, written in Rust. It runs anywhere (your CI pipeline will eat it right up).
 - Sprout deduplicates and encrypts your data - snapshotting is quick and lightweight.
 - Sprout locally stashes your database and content when seeding, meaning you can easily revert.
@@ -11,9 +9,21 @@ _Sprout allows you and your team to easily snapshot or pull down entire archives
 - Store your content anywhere; locally, or on the cloud. Use S3, SFTP, HTTP or make use of tons of OpenDAL or Rclone providers. Even a local path is fine.
 - Commit a `sprout.yaml` to your project repo and let your team easily bootstrap content in new environments.
 
+[![asciicast](https://asciinema.org/a/636443.svg)](https://asciinema.org/a/636443)
+
+_Sprout allows you and your team to easily snapshot or pull down entire archives of wp-uploads and database content, in a secure and efficient manner. Easily track seeded content in git, but store your gigabytes of uploads anywhere else._
+
 I wrote Sprout after years of being sent SQL files and gigabytes of TAR archives when working as a consultant on WordPress projects. There had to be a better way, and I think this is it.
 
 **This is a very early preview release, and should be used only when you've backed up your databases and uploads. I'm not responsible for anything bad that happens.**
+
+## Installation
+
+Binaries are avalailable for macos and linux on both x86_64 and arm64. You can get them via the [releases page](https://github.com/talss89/sprout/releases). Untar and put in your `PATH`.
+
+An installer will come soon.
+
+Windows support is untested, and will require compilation with `cargo`.
 
 ## How it works
 
