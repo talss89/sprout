@@ -2,15 +2,35 @@
 name = "sprout"
 version = "0.1.0"
 edition = "2021"
+build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 anyhow = "1.0.79"
-clap = { version = "4.4.18", features = ["derive"] }
+clap = { version = "4.4.13", features = ["deprecated",
+    "derive",
+    "suggestions",
+    "color",
+    "env",
+    "unicode",
+    "wrap_help"] }
+colored = "2.1.0"
+console = "0.15.8"
+dialoguer = "0.11.0"
+duration-macro = "0.1.0"
+env_logger = "0.10.1"
+homedir = "0.2.1"
+indicatif = "0.17.7"
 log = "0.4.20"
+passwords = "3.1.16"
 rustic_backend = "0.1.1"
 rustic_core = "0.2.0"
 serde = "1.0.196"
-simplelog = "0.12.1"
+serde_json = "1.0.113"
+serde_yaml = "0.9.31"
+sha2 = "0.10.8"
 tempfile = "3.9.0"
+
+[build-dependencies]
+built = "0.7.1"
