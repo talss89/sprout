@@ -56,17 +56,37 @@ pub struct RepoArgs {
 pub enum RepoCommand {
     /// Initialise a new repository
     Init(RepoInitArgs),
+
+    New(RepoNewArgs),
+
+    List,
+
+    Use(RepoUseArgs),
 }
 
 #[derive(Args, Debug)]
 pub struct RepoInitArgs {
     /// Respository URI or path. See the readme for more information on how to connect to S3 or other remote storage providers.
-    #[arg(index = 1, value_name = "REPOSITORY-PATH")]
-    pub path: String,
+    #[arg(index = 1, value_name = "LABEL")]
+    pub label: String,
 
     /// Set the repository access key
     #[arg(short, long)]
     pub access_key: Option<String>,
+}
+
+#[derive(Args, Debug)]
+pub struct RepoNewArgs {
+    /// Respository URI or path. See the readme for more information on how to connect to S3 or other remote storage providers.
+    #[arg(index = 1, value_name = "LABEL")]
+    pub label: String,
+}
+
+#[derive(Args, Debug)]
+pub struct RepoUseArgs {
+    /// Respository URI or path. See the readme for more information on how to connect to S3 or other remote storage providers.
+    #[arg(index = 1, value_name = "LABEL")]
+    pub label: String,
 }
 
 #[derive(Args, Debug)]

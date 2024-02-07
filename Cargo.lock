@@ -372,6 +372,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "capturing-glob"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9a4471dc30ffbbe4ce4c5a7c68fd77d98651517b9ff8bf499de82e041bad2e3"
+
+[[package]]
 name = "cc"
 version = "1.0.83"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -848,6 +854,16 @@ name = "duration-macro"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99d69c779878a7f7814ab593765bf09e2a97d3ca6bb5fa315ddab589b7bf2b0f"
+
+[[package]]
+name = "edit"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f364860e764787163c8c8f58231003839be31276e821e2ad2092ddf496b1aa09"
+dependencies = [
+ "tempfile",
+ "which",
+]
 
 [[package]]
 name = "either"
@@ -2809,11 +2825,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "built",
+ "capturing-glob",
  "clap",
  "colored",
  "console",
  "dialoguer",
  "duration-macro",
+ "edit",
  "env_logger",
  "homedir",
  "indicatif",
@@ -3395,6 +3413,18 @@ checksum = "58cd2333b6e0be7a39605f0e255892fd7418a682d8da8fe042fe25128794d2ed"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "which"
+version = "4.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87ba24419a2078cd2b0f2ede2691b6c66d8e47836da3b6db8265ebad47afbfc7"
+dependencies = [
+ "either",
+ "home",
+ "once_cell",
+ "rustix",
 ]
 
 [[package]]

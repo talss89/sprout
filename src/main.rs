@@ -4,25 +4,24 @@ use colored::*;
 use dialoguer::{Confirm, Input};
 
 use env_logger::Builder;
-use homedir::get_my_home;
 use log::{info, warn};
 use passwords::PasswordGenerator;
 use rustic_backend::BackendOptions;
 use rustic_core::{Progress, ProgressBars, RepositoryOptions};
-use std::{io::Write, time::SystemTime};
+use std::{fs, io::Write, time::SystemTime};
 use theme::CliTheme;
 
 use crate::{
     cli::{Options, RepoCommand, SubCommand},
     project::Project,
-    repo::SproutProgressBar,
+    repo::{Repositories, RepositoryDefinition, SproutProgressBar},
     stash::Stash,
 };
 
 mod cli;
+mod engine;
 mod project;
 mod repo;
-mod sproutfile;
 mod stash;
 mod theme;
 
@@ -142,7 +141,8 @@ fn run() -> anyhow::Result<CliResponse> {
         })
         .init();
 
-    let sprout_home = get_my_home().unwrap().unwrap().as_path().join(".sprout");
+    let sprout_home = crate::engine::get_sprout_home();
+    crate::engine::ensure_sprout_home()?;
 
     std::env::set_current_dir(&options.path)?;
 
@@ -159,6 +159,114 @@ fn run() -> anyhow::Result<CliResponse> {
         }
 
         SubCommand::Repo(args) => match args.subcommand {
+            RepoCommand::Use(args) => {
+                info!("Setting default repo to {}", &args.label);
+
+                let mut sprout_config = crate::engine::get_sprout_config()?;
+
+                let (_, definition) = Repositories::get(&args.label)?;
+
+                sprout_config.default_repo = args.label.to_owned();
+
+                crate::engine::write_sprout_config(&sprout_config)?;
+
+                Ok(CliResponse {
+                    msg: format!("Set default repo to {}", args.label),
+                    data: Some(serde_json::to_string(&definition)?),
+                })
+            }
+            RepoCommand::List => {
+                let defs = Repositories::list()?;
+                let sprout_config = crate::engine::get_sprout_config()?;
+
+                info!(
+                    "Your repository definitions are stored at {}",
+                    crate::engine::get_sprout_home().join("repos").display()
+                );
+
+                eprintln!("");
+                eprintln!(
+                    "{}",
+                    format!("{:32} | {}", "Repository Label", "Repository URI / Path")
+                        .bold()
+                        .dimmed()
+                );
+
+                for (label, definition) in &defs {
+                    let repo = definition.repo.clone();
+                    if sprout_config.default_repo == *label {
+                        eprintln!(
+                            "{}",
+                            format!(
+                                "{:32} | {}",
+                                label,
+                                format!(
+                                    "{} {}",
+                                    repo.repository.unwrap_or("".to_string()),
+                                    "<-- Default".to_string().dimmed()
+                                )
+                            )
+                            .bold()
+                            .green()
+                        );
+                    } else {
+                        eprintln!(
+                            "{}",
+                            format!(
+                                "{:32} | {}",
+                                label,
+                                repo.repository.unwrap_or("".to_string())
+                            )
+                        );
+                    }
+                }
+
+                Ok(CliResponse {
+                    msg: "Listed all repositories".to_string(),
+                    data: Some(serde_json::to_string(&defs)?),
+                })
+            }
+            RepoCommand::New(args) => {
+                info!("Creating a new Sprout repository definition...");
+
+                let definition = RepositoryDefinition {
+                    access_key: "".to_string(),
+                    repo: BackendOptions {
+                        ..Default::default()
+                    },
+                };
+
+                let repo_file = sprout_home.join(format!("repos/{}.yaml", &args.label));
+
+                Repositories::create(&definition, &repo_file)?;
+
+                edit::edit_file(&repo_file)?;
+
+                let mut sprout_config = crate::engine::get_sprout_config()?;
+
+                if sprout_config.default_repo == "" {
+                    info!("Setting default repo to {}", &args.label);
+
+                    sprout_config.default_repo = args.label.to_owned();
+
+                    crate::engine::write_sprout_config(&sprout_config)?;
+                } else {
+                    info!(
+                        "Your default repo ({}) is unchanged.",
+                        sprout_config.default_repo
+                    );
+                }
+
+                warn!("If this is a brand new repo, remember to initialise it with `sprout repo init {}`", &args.label);
+
+                Ok(CliResponse {
+                    msg: format!(
+                        "Created repository definition at {}",
+                        &repo_file.to_string_lossy()
+                    ),
+                    data: Some(serde_json::to_string(&definition)?),
+                })
+            }
             RepoCommand::Init(args) => {
                 info!("Initialising new Sprout repository...");
 
@@ -173,27 +281,39 @@ fn run() -> anyhow::Result<CliResponse> {
 
                 let generated_access_key = pg.generate_one().unwrap();
 
+                let (definition_path, mut definition) = Repositories::get(&args.label)?;
+
                 let access_key = match args.access_key {
                     Some(access_key) => access_key,
-                    None => Input::with_theme(&CliTheme::default())
-                        .with_prompt("Please set a secure access key for this repository.")
-                        .default(generated_access_key.to_string())
-                        .interact_text()
-                        .unwrap(),
+                    None => {
+                        if definition.access_key == "" {
+                            Input::with_theme(&CliTheme::default())
+                                .with_prompt("Please set a secure access key for this repository.")
+                                .default(generated_access_key.to_string())
+                                .interact_text()
+                                .unwrap()
+                        } else {
+                            definition.access_key
+                        }
+                    }
                 };
 
                 let progress = SproutProgressBar {};
                 let spinner =
-                    progress.progress_spinner(format!("Creating repository at {}", &args.path));
+                    progress.progress_spinner(format!("Initialising repository {}", &args.label));
 
-                let repo_opts = RepositoryOptions::default().password(access_key);
-                let backend = BackendOptions::default().repository(&args.path);
-                let repo = crate::repo::open_repo(&backend, repo_opts)?;
+                let repo_opts = RepositoryOptions::default().password(&access_key);
+
+                let repo = crate::repo::open_repo(&definition.repo, repo_opts)?;
                 let repo = crate::repo::initialise(repo)?;
 
                 spinner.finish();
 
-                info!("Sprout repo created at {}", &args.path);
+                definition.access_key = access_key;
+
+                Repositories::save(&definition, &definition_path)?;
+
+                info!("Sprout repo created at {}", &args.label);
 
                 return Ok(CliResponse {
                     msg: "Sprout repository initialised".to_string(),
@@ -207,9 +327,9 @@ fn run() -> anyhow::Result<CliResponse> {
 
             project.print_header();
 
-            let access_key = project.obtain_access_key()?;
+            let (_, definition) = Repositories::get(&project.config.repo)?;
 
-            let repo = project.open_repo(access_key)?;
+            let repo = project.open_repo(definition.access_key)?;
 
             if let Some(branch) = args.branch {
                 if branch != project.config.branch {
@@ -269,11 +389,11 @@ fn run() -> anyhow::Result<CliResponse> {
             let project = Project::new(options.path.to_owned())?;
 
             project.print_header();
-            let access_key = project.obtain_access_key()?;
+            let (_, definition) = Repositories::get(&project.config.repo)?;
 
             if !args.no_stash {
                 warn!("This command is destructive. Stashing your database and uploads locally.");
-                let stash = Stash::new(sprout_home)?;
+                let stash = Stash::new(sprout_home.join("stash"))?;
                 stash.stash(&project)?;
             } else {
                 let confirmation = Confirm::with_theme(&CliTheme::default())
@@ -291,7 +411,7 @@ fn run() -> anyhow::Result<CliResponse> {
                 }
             }
 
-            let repo = project.open_repo(access_key)?;
+            let repo = project.open_repo(definition.access_key)?;
 
             let snap_id = project.get_active_snapshot_id(&repo)?;
 
@@ -322,7 +442,7 @@ fn run() -> anyhow::Result<CliResponse> {
                 });
             }
 
-            let stash = Stash::new(sprout_home)?;
+            let stash = Stash::new(sprout_home.join("stash"))?;
 
             let snap_id = match args.snapshot_id {
                 Some(id) => id,

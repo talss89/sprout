@@ -8,16 +8,10 @@ use rustic_core::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{project::Project, repo::SproutProgressBar};
+use crate::{engine::*, project::Project, repo::SproutProgressBar};
 
 pub struct Stash {
     pub path: PathBuf,
-    pub config: StashConfig,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct StashConfig {
-    pub key: String,
 }
 
 impl Stash {
@@ -28,19 +22,10 @@ impl Stash {
             Stash::initialise(path.to_owned())?;
         }
 
-        let config = serde_yaml::from_str(&fs::read_to_string(path.join("stash-config.yaml"))?)?;
-
-        Ok(Self { path, config })
+        Ok(Self { path })
     }
 
     pub fn initialise(path: PathBuf) -> anyhow::Result<()> {
-        if path.join("stash-config.yaml").exists() {
-            return Err(anyhow::anyhow!(
-                "A stash configuration already exists at {}",
-                path.to_string_lossy()
-            ));
-        }
-
         info!("Initialising new stash at {}", path.to_string_lossy());
 
         let pg = PasswordGenerator::new()
@@ -63,22 +48,20 @@ impl Stash {
         let config_opts = ConfigOptions::default();
         let _repo = repo.init(&key_opts, &config_opts)?;
 
-        let stash_config = StashConfig {
-            key: passkey.clone(),
-        };
+        let mut sprout_config = get_sprout_config()?;
 
-        fs::write(
-            path.join("stash-config.yaml"),
-            serde_yaml::to_string(&stash_config)?,
-        )?;
+        sprout_config.stash_key = passkey;
+
+        write_sprout_config(&sprout_config)?;
 
         Ok(())
     }
 
     fn open_stash(&self) -> anyhow::Result<Repository<SproutProgressBar, ()>> {
+        let sprout_config = get_sprout_config()?;
         let backend =
             BackendOptions::default().repository(self.path.join("stash").to_string_lossy());
-        let repo_opts = RepositoryOptions::default().password(&self.config.key);
+        let repo_opts = RepositoryOptions::default().password(&sprout_config.stash_key);
 
         crate::repo::open_repo(&backend, repo_opts)
     }
@@ -91,7 +74,7 @@ impl Stash {
 
         info!("Stashed with snapshot id {}", id);
         info!(
-            "To restore, run `sprout unstash` or `sprout unstash {}`",
+            "To restore, run `sprout un-stash` or `sprout un-stash {}`",
             id
         );
 
