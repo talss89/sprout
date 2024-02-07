@@ -1,4 +1,4 @@
-use crate::{cli::RepoInitArgs, project::Project};
+use crate::{project::Project};
 use duration_macro::duration;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::info;
@@ -7,7 +7,7 @@ use rustic_core::{
     BackupOptions, ConfigOptions, Id, KeyOptions, LocalDestination, LsOptions, PathList, Progress,
     ProgressBars, Repository, RepositoryOptions, RestoreOptions, SnapshotOptions,
 };
-use std::{borrow::Cow, fs, path::PathBuf, thread::sleep};
+use std::{borrow::Cow, fs, path::PathBuf};
 use tempfile::tempdir;
 
 pub fn open_repo(
@@ -97,7 +97,7 @@ pub fn snapshot(
         .to_snapshot()?;
 
     // Create snapshot
-    let snap = repo.backup(&backup_opts, &source, snap)?;
+    let _snap = repo.backup(&backup_opts, &source, snap)?;
 
     info!("Successfully created uploads snapshot");
 
@@ -224,7 +224,7 @@ impl ProgressBars for SproutProgressBar {
         p
     }
 
-    fn progress_counter(&self, prefix: impl Into<Cow<'static, str>>) -> Self::P {
+    fn progress_counter(&self, _prefix: impl Into<Cow<'static, str>>) -> Self::P {
         let p = SproutProgress::new();
         p.bar.set_style(
             ProgressStyle::with_template(
@@ -237,7 +237,7 @@ impl ProgressBars for SproutProgressBar {
         p
     }
 
-    fn progress_bytes(&self, prefix: impl Into<Cow<'static, str>>) -> Self::P {
+    fn progress_bytes(&self, _prefix: impl Into<Cow<'static, str>>) -> Self::P {
         let p = SproutProgress::new();
         p.bar.set_style(ProgressStyle::with_template("{spinner:^9.green} [{elapsed_precise:.dimmed}] [{wide_bar:.dimmed.cyan/blue}] {bytes:.dimmed}/{total_bytes:.dimmed} ({eta:.dimmed})")
         .unwrap()

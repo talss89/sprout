@@ -2,21 +2,19 @@ use std::{
     fs,
     path::PathBuf,
     process::{Command, Stdio},
-    thread::sleep,
 };
 
 use dialoguer::Input;
-use duration_macro::duration;
-use indicatif::ProgressBar;
-use log::{info, warn};
+
+
+use log::{info};
 use rustic_backend::BackendOptions;
-use rustic_core::{Id, NoProgressBars, Progress, ProgressBars, Repository, RepositoryOptions};
+use rustic_core::{Id, Progress, ProgressBars, Repository, RepositoryOptions};
 use serde::Serialize;
 use sha2::{Digest, Sha224};
 
 use crate::{
-    cli::SnapArgs,
-    repo::{SproutProgress, SproutProgressBar},
+    repo::{SproutProgressBar},
     sproutfile::SproutFile,
     theme::CliTheme,
 };
@@ -95,7 +93,7 @@ impl Project {
             .stdin(Stdio::null())
             .stdout(Stdio::piped());
 
-        let mut child = cmd.spawn()?;
+        let child = cmd.spawn()?;
 
         let output = child.wait_with_output()?;
 
@@ -116,7 +114,7 @@ impl Project {
             .stdin(Stdio::null())
             .stdout(Stdio::piped());
 
-        let mut child = cmd.spawn()?;
+        let child = cmd.spawn()?;
 
         let output = child.wait_with_output()?;
 
@@ -137,7 +135,7 @@ impl Project {
             .stdin(Stdio::null())
             .stdout(Stdio::piped());
 
-        let mut child = cmd.spawn()?;
+        let child = cmd.spawn()?;
 
         let output = child.wait_with_output()?;
 
@@ -164,7 +162,7 @@ impl Project {
             .stdin(Stdio::null())
             .stdout(Stdio::piped());
 
-        let mut child = cmd.spawn()?;
+        let child = cmd.spawn()?;
 
         let output = child.wait_with_output()?;
 

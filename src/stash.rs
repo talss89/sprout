@@ -102,7 +102,7 @@ impl Stash {
         info!("Restoring stash...");
         let repo = self.open_stash()?;
 
-        let id = crate::repo::restore(repo, project, snap_id)?;
+        let _id = crate::repo::restore(repo, project, snap_id)?;
 
         Ok(())
     }
