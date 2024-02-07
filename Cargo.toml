@@ -8,6 +8,7 @@ build = "build.rs"
 
 [dependencies]
 anyhow = "1.0.79"
+capturing-glob = "0.1.1"
 clap = { version = "4.4.13", features = ["deprecated",
     "derive",
     "suggestions",
@@ -19,6 +20,7 @@ colored = "2.1.0"
 console = "0.15.8"
 dialoguer = "0.11.0"
 duration-macro = "0.1.0"
+edit = "0.1.5"
 env_logger = "0.10.1"
 homedir = "0.2.1"
 indicatif = "0.17.7"

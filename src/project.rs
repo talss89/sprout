@@ -6,16 +6,13 @@ use std::{
 
 use dialoguer::Input;
 
-
-use log::{info};
-use rustic_backend::BackendOptions;
+use log::info;
 use rustic_core::{Id, Progress, ProgressBars, Repository, RepositoryOptions};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha224};
 
 use crate::{
-    repo::{SproutProgressBar},
-    sproutfile::SproutFile,
+    repo::{Repositories, SproutProgressBar},
     theme::CliTheme,
 };
 
@@ -24,13 +21,22 @@ use colored::*;
 #[derive(Debug, Serialize)]
 pub struct Project {
     pub path: PathBuf,
-    pub config: SproutFile,
+    pub config: ProjectConfig,
     pub unique_hash: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ProjectConfig {
+    pub name: String,
+    pub branch: String,
+    pub snapshot: Option<String>,
+    pub uploads_path: PathBuf,
+    pub repo: String,
 }
 
 impl Project {
     pub fn new(path: PathBuf) -> anyhow::Result<Self> {
-        let config = Self::load_sproutfile(&path.join("./sprout.yaml"))?;
+        let config = Self::load_project_config(&path.join("./sprout.yaml"))?;
 
         Ok(Self {
             unique_hash: Project::generate_unique_hash(&path)?,
@@ -46,14 +52,12 @@ impl Project {
 
         let path = fs::canonicalize(path).unwrap();
 
-        let config = SproutFile {
+        let config = ProjectConfig {
             name: path.file_name().unwrap().to_string_lossy().into_owned(),
             branch: "main".to_string(),
             snapshot: None,
             uploads_path: PathBuf::from("./wp-content/uploads"),
-            repo: BackendOptions {
-                ..Default::default()
-            },
+            repo: "".to_string(), // TODO: Fetch last repo?
         };
 
         fs::write(path.join("./sprout.yaml"), serde_yaml::to_string(&config)?)?;
@@ -61,8 +65,8 @@ impl Project {
         Project::new(path)
     }
 
-    pub fn load_sproutfile(path: &PathBuf) -> anyhow::Result<SproutFile> {
-        Ok(serde_yaml::from_slice::<SproutFile>(&fs::read(path)?)?)
+    pub fn load_project_config(path: &PathBuf) -> anyhow::Result<ProjectConfig> {
+        Ok(serde_yaml::from_slice::<ProjectConfig>(&fs::read(path)?)?)
     }
 
     pub fn is_wordpress_installed(path: &PathBuf) -> anyhow::Result<bool> {
@@ -287,8 +291,8 @@ impl Project {
         access_key: String,
     ) -> anyhow::Result<Repository<SproutProgressBar, ()>> {
         let repo_opts = RepositoryOptions::default().password(access_key);
-        let backend = self.config.repo.clone();
-        let repo = crate::repo::open_repo(&backend, repo_opts)?;
+        let (_, definition) = Repositories::get(self.config.repo.as_str())?;
+        let repo = crate::repo::open_repo(&definition.repo, repo_opts)?;
 
         Ok(repo)
     }
@@ -386,27 +390,18 @@ impl Project {
         eprintln!(
             "{:^26} {}",
             "Remote Repository:".bold().cyan().dimmed(),
-            self.config
-                .repo
-                .repository
-                .as_ref()
-                .unwrap_or(&"Unknown".to_string())
-                .dimmed()
-                .italic()
+            format!(
+                "{} {}",
+                self.config.repo.dimmed().italic(),
+                match Repositories::get(&self.config.repo) {
+                    Err(_) => "UNKNOWN".to_string().red(),
+                    Ok((_, definition)) => match definition.repo.repository {
+                        None => "INVALID".to_string().red(),
+                        Some(repo_path) => format!("({})", repo_path).dimmed().italic(),
+                    },
+                }
+            )
         );
         eprintln!("");
-    }
-
-    pub fn obtain_access_key(&self) -> anyhow::Result<String> {
-        if let Ok(key) = std::env::var("SPROUT_ACCESS_KEY") {
-            return Ok(key);
-        }
-
-        Ok(Input::with_theme(&CliTheme::default())
-            .with_prompt(
-                "Please enter your access key, or set SPROUT_ACCESS_KEY in your environment.",
-            )
-            .interact_text()
-            .unwrap())
     }
 }
