@@ -115,6 +115,11 @@ fn run() -> anyhow::Result<CliResponse> {
             let mut level_style = buf.default_level_style(record.level());
             if record.target().starts_with("rustic_core")
                 || record.target().starts_with("rustic_backend")
+                || (record.target().starts_with("opendal")
+                    && record
+                        .args()
+                        .to_string()
+                        .contains("operation=stat path=config -> NotFound (persistent)"))
             {
                 if let Err(_) = std::env::var("SPROUT_DEBUG_RUSTIC") {
                     return Ok(());
