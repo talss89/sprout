@@ -148,9 +148,12 @@ fn run() -> anyhow::Result<CliResponse> {
 
     match options.subcommand {
         SubCommand::Init => {
-            info!("Creating a `sprout.yaml` for your project...");
+            info!("Creating a `sprout.yaml` for your project and opening it in the default text editor...");
             let project = Project::initialise(options.path.to_owned())?;
-            info!("Your project is ready. Please check and customise `sprout.yaml` as required");
+
+            edit::edit_file(options.path.join("./sprout.yaml"))?;
+
+            info!("Your project is ready.");
 
             return Ok(CliResponse {
                 msg: "Project initialised".to_string(),
