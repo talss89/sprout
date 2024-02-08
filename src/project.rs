@@ -6,7 +6,7 @@ use std::{
 
 use dialoguer::Input;
 
-use log::info;
+use log::{info, warn};
 use rustic_core::{Id, Progress, ProgressBars, Repository, RepositoryOptions};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha224};
@@ -24,6 +24,7 @@ pub struct Project {
     pub path: PathBuf,
     pub config: ProjectConfig,
     pub unique_hash: Option<String>,
+    pub home_url: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -42,6 +43,7 @@ impl Project {
         Ok(Self {
             unique_hash: Project::generate_unique_hash(&path)?,
             path,
+            home_url: format!("https://{}.test", &config.name),
             config,
         })
     }
@@ -100,10 +102,35 @@ impl Project {
         Ok(output.success())
     }
 
-    pub fn get_home_url(&self) -> anyhow::Result<String> {
+    pub fn determine_home_url(&mut self) -> anyhow::Result<()> {
+        let progress = SproutProgressBar {};
+        let spinner =
+            progress.progress_spinner(format!("Loading WordPress project with WP-CLI..."));
+
+        let home_url = match Self::get_home_url(&self.path) {
+            Ok(url) => url,
+            Err(e) => {
+                spinner.finish();
+                warn!("Couldn't query wp-cli to determine your current home URL.");
+                Input::with_theme(&CliTheme::default())
+                    .with_prompt("Please enter your WP_HOME URL.")
+                    .default(format!("https://{}.test", &self.config.name))
+                    .interact_text()
+                    .unwrap()
+            }
+        };
+
+        spinner.finish();
+
+        self.home_url = home_url;
+
+        Ok(())
+    }
+
+    pub fn get_home_url(path: &PathBuf) -> anyhow::Result<String> {
         let mut cmd = Command::new("wp");
 
-        cmd.current_dir(&self.path)
+        cmd.current_dir(&path)
             .arg("option")
             .arg("get")
             .arg("home")
@@ -114,6 +141,12 @@ impl Project {
         let child = cmd.spawn()?;
 
         let output = child.wait_with_output()?;
+
+        if !output.status.success() {
+            return Err(anyhow::anyhow!(
+                "Could not determine WordPress home URL via WP-CLI"
+            ));
+        }
 
         Ok(String::from_utf8_lossy(&output.stdout)
             .to_string()
@@ -230,7 +263,7 @@ impl Project {
 
         cmd.current_dir(&self.path)
             .arg("search-replace")
-            .arg(self.get_home_url()?)
+            .arg(&self.home_url)
             .arg("__SPROUT__HOME__")
             .arg(format!("--export={}", path.to_string_lossy()))
             .stderr(Stdio::null())
@@ -246,8 +279,6 @@ impl Project {
     }
 
     pub fn import_database(&self, path: PathBuf) -> anyhow::Result<()> {
-        let home_url = self.get_home_url()?;
-
         let mut cmd = Command::new("wp");
 
         let progress = SproutProgressBar {};
@@ -266,14 +297,14 @@ impl Project {
 
         spinner
             .bar
-            .set_message(format!("Setting home URL to {}", &home_url));
+            .set_message(format!("Setting home URL to {}", &self.home_url));
 
         let mut cmd = Command::new("wp");
 
         cmd.current_dir(&self.path)
             .arg("search-replace")
             .arg("__SPROUT__HOME__")
-            .arg(&home_url)
+            .arg(&self.home_url)
             .stderr(Stdio::null())
             .stdin(Stdio::null())
             .stdout(Stdio::null());
@@ -283,7 +314,7 @@ impl Project {
 
         spinner.finish();
 
-        info!("Database installed and URL set to {}", &home_url);
+        info!("Database installed and URL set to {}", &self.home_url);
 
         Ok(())
     }

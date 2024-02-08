@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf};
+use std::path::PathBuf;
 
 use log::{info, warn};
 use passwords::PasswordGenerator;
@@ -6,7 +6,6 @@ use rustic_backend::BackendOptions;
 use rustic_core::{
     repofile::SnapshotFile, ConfigOptions, KeyOptions, Repository, RepositoryOptions,
 };
-use serde::{Deserialize, Serialize};
 
 use crate::{engine::*, project::Project, repo::SproutProgressBar};
 

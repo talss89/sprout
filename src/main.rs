@@ -330,6 +330,8 @@ fn run() -> anyhow::Result<CliResponse> {
 
             project.print_header();
 
+            project.determine_home_url()?;
+
             let (_, definition) = Repositories::get(&project.config.repo)?;
 
             let repo = project.open_repo(definition.access_key)?;
@@ -389,9 +391,12 @@ fn run() -> anyhow::Result<CliResponse> {
         }
 
         SubCommand::Seed(args) => {
-            let project = Project::new(options.path.to_owned())?;
+            let mut project = Project::new(options.path.to_owned())?;
 
             project.print_header();
+
+            project.determine_home_url()?;
+
             let (_, definition) = Repositories::get(&project.config.repo)?;
 
             if !args.no_stash {
