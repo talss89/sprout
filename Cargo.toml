@@ -36,3 +36,8 @@ tempfile = "3.9.0"
 
 [build-dependencies]
 built = "0.7.1"
+
+[profile.release]
+strip = true
+lto = true
+panic = "abort"
