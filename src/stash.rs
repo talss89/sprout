@@ -4,7 +4,7 @@ use log::{info, warn};
 use passwords::PasswordGenerator;
 use rustic_backend::BackendOptions;
 use rustic_core::{
-    repofile::SnapshotFile, ConfigOptions, KeyOptions, Repository, RepositoryOptions,
+    repofile::SnapshotFile, ConfigOptions, Id, KeyOptions, Repository, RepositoryOptions
 };
 
 use crate::{engine::*, project::Project, repo::SproutProgressBar};
@@ -69,7 +69,7 @@ impl Stash {
         info!("Stashing {}...", project.config.name);
         let repo = self.open_stash()?;
 
-        let id = crate::repo::snapshot(repo, project)?;
+        let id = crate::repo::snapshot(repo, project, true)?;
 
         info!("Stashed with snapshot id {}", id);
         info!(
@@ -80,7 +80,7 @@ impl Stash {
         Ok(())
     }
 
-    pub fn restore(&self, project: &Project, snap_id: String) -> anyhow::Result<()> {
+    pub fn restore(&self, project: &Project, snap_id: Id) -> anyhow::Result<()> {
         info!("Restoring stash...");
         let repo = self.open_stash()?;
 

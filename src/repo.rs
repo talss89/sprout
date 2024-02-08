@@ -5,8 +5,9 @@ use indicatif::{ProgressBar, ProgressStyle};
 use log::info;
 use rustic_backend::BackendOptions;
 use rustic_core::{
-    BackupOptions, ConfigOptions, Id, KeyOptions, LocalDestination, LsOptions, PathList, Progress,
-    ProgressBars, Repository, RepositoryOptions, RestoreOptions, SnapshotOptions,
+    BackupOptions, ConfigOptions, Id, KeyOptions, LocalDestination, LsOptions, ParentOptions,
+    PathList, Progress, ProgressBars, Repository, RepositoryOptions, RestoreOptions,
+    SnapshotOptions,
 };
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, fs, path::PathBuf};
@@ -98,16 +99,26 @@ pub fn initialise(repo: Repository<SproutProgressBar, ()>) -> anyhow::Result<()>
 pub fn snapshot(
     repository: Repository<SproutProgressBar, ()>,
     project: &Project,
+    automatic_parent: bool,
 ) -> anyhow::Result<Id> {
-    let repo = repository.open()?.to_indexed_ids()?;
+    let repo = repository.clone().open()?.to_indexed_ids()?;
 
     let dir = tempdir()?;
     let db_filename = dir.path().join("database.sql");
 
     project.dump_database(&db_filename)?;
 
-    let backup_opts =
+    let mut backup_opts =
         BackupOptions::default().as_path(PathBuf::from("/.sprout/database/database.sql"));
+
+    if !automatic_parent {
+        backup_opts = backup_opts.parent_opts(ParentOptions::default().parent(
+            match project.config.snapshot {
+                Some(id) => Some(id.to_string()),
+                None => None,
+            },
+        ));
+    }
 
     let source = PathList::from_string(&db_filename.to_string_lossy())?;
 
@@ -134,7 +145,18 @@ pub fn snapshot(
 
     let database_snap_id = snap.id;
 
-    let backup_opts = BackupOptions::default().as_path(PathBuf::from("/.sprout/uploads"));
+    let mut backup_opts = BackupOptions::default().as_path(PathBuf::from("/.sprout/uploads"));
+
+    if !automatic_parent {
+        if let Some(parent_id) = project.config.snapshot.clone() {
+            let uploads_parent_id = project
+                .get_latest_uploads_snapshot_id_from_database_snapshot_id(parent_id, &repository)?;
+
+            backup_opts = backup_opts
+                .parent_opts(ParentOptions::default().parent(Some(uploads_parent_id.to_string())));
+        }
+    }
+
     let source = PathList::from_string(
         &fs::canonicalize(&project.config.uploads_path)
             .unwrap()
@@ -144,7 +166,7 @@ pub fn snapshot(
         .add_tags(
             format!(
                 "sprt_obj:uploads,sprt_db:{},sprt_uniq:{},sprt_branch:{}",
-                database_snap_id,
+                database_snap_id.to_hex().as_str(),
                 project
                     .unique_hash
                     .as_ref()
@@ -168,7 +190,7 @@ pub fn snapshot(
 pub fn restore(
     repository: Repository<SproutProgressBar, ()>,
     project: &Project,
-    snap_id: String,
+    snap_id: Id,
 ) -> anyhow::Result<()> {
     let repo = repository.open()?.to_indexed()?;
 
@@ -177,7 +199,9 @@ pub fn restore(
     let node = repo.node_from_snapshot_path(&format!("latest:/.sprout/uploads"), |snap| {
         if snap.hostname == ident
             && snap.tags.contains("sprt_obj:uploads")
-            && snap.tags.contains(&format!("sprt_db:{}", snap_id))
+            && snap
+                .tags
+                .contains(&format!("sprt_db:{}", snap_id.to_hex().as_str()))
             && snap
                 .tags
                 .contains(&format!("sprt_branch:{}", project.config.branch))

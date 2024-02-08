@@ -7,7 +7,7 @@ use env_logger::Builder;
 use log::{info, warn};
 use passwords::PasswordGenerator;
 use rustic_backend::BackendOptions;
-use rustic_core::{Progress, ProgressBars, RepositoryOptions};
+use rustic_core::{Id, Progress, ProgressBars, RepositoryOptions};
 use std::{fs, io::Write, time::SystemTime};
 use theme::CliTheme;
 
@@ -423,7 +423,7 @@ fn run() -> anyhow::Result<CliResponse> {
 
             let snap_id = project.get_active_snapshot_id(&repo)?;
 
-            crate::repo::restore(repo, &project, snap_id.to_string())?;
+            crate::repo::restore(repo, &project, snap_id)?;
 
             return Ok(CliResponse {
                 msg: "Content and database seeded".to_string(),
@@ -453,11 +453,11 @@ fn run() -> anyhow::Result<CliResponse> {
             let stash = Stash::new(sprout_home.join("stash"))?;
 
             let snap_id = match args.snapshot_id {
-                Some(id) => id,
-                None => stash.get_latest_stash(&project)?.id.to_string(),
+                Some(id) => Id::from_hex(&id)?,
+                None => stash.get_latest_stash(&project)?.id,
             };
 
-            stash.restore(&project, snap_id.to_owned())?;
+            stash.restore(&project, snap_id)?;
 
             return Ok(CliResponse {
                 msg: format!(

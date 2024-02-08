@@ -31,7 +31,7 @@ pub struct Project {
 pub struct ProjectConfig {
     pub name: String,
     pub branch: String,
-    pub snapshot: Option<String>,
+    pub snapshot: Option<Id>,
     pub uploads_path: PathBuf,
     pub repo: String,
 }
@@ -320,7 +320,7 @@ impl Project {
     }
 
     pub fn update_snapshot_id(&mut self, id: Id, branch: String) -> anyhow::Result<()> {
-        self.config.snapshot = Some(id.to_string());
+        self.config.snapshot = Some(id);
         self.config.branch = branch;
 
         fs::write(
@@ -343,7 +343,7 @@ impl Project {
     }
 
     pub fn snapshot(&self, repo: &Repository<SproutProgressBar, ()>) -> anyhow::Result<Id> {
-        crate::repo::snapshot(repo.clone(), self)
+        crate::repo::snapshot(repo.clone(), self, false)
     }
 
     pub fn get_latest_unique_hash(
@@ -411,6 +411,31 @@ impl Project {
         Ok(node.id)
     }
 
+    pub fn get_latest_uploads_snapshot_id_from_database_snapshot_id(
+        &self,
+        database_id: Id,
+        repo: &Repository<SproutProgressBar, ()>,
+    ) -> anyhow::Result<Id> {
+        let node = repo
+            .clone()
+            .open()?
+            .to_indexed_ids()?
+            .get_snapshot_from_str("latest", |snap| {
+                if snap.hostname == self.config.name
+                    && snap.tags.contains("sprt_obj:uploads")
+                    && snap
+                        .tags
+                        .contains(&format!("sprt_db:{}", database_id.to_hex().as_str()))
+                {
+                    return true;
+                }
+
+                false
+            })?;
+
+        Ok(node.id)
+    }
+
     pub fn print_header(&self) -> () {
         eprintln!(
             "{:^26} {}",
@@ -425,13 +450,12 @@ impl Project {
         eprintln!(
             "{:^26} {}",
             "Snapshot:".bold().cyan().dimmed(),
-            &self
-                .config
-                .snapshot
-                .as_ref()
-                .unwrap_or(&"Unknown".to_string())
-                .dimmed()
-                .italic()
+            match &self.config.snapshot {
+                Some(id) => id.to_string(),
+                None => "Unknown".to_string(),
+            }
+            .dimmed()
+            .italic()
         );
         eprintln!(
             "{:^26} {}",
