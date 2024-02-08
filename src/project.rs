@@ -385,6 +385,14 @@ impl Project {
         &self,
         repo: &Repository<SproutProgressBar, ()>,
     ) -> anyhow::Result<Id> {
+        self.get_latest_snapshot_id_for_branch(&self.config.branch, repo)
+    }
+
+    pub fn get_latest_snapshot_id_for_branch(
+        &self,
+        branch: &str,
+        repo: &Repository<SproutProgressBar, ()>,
+    ) -> anyhow::Result<Id> {
         let node = repo
             .clone()
             .open()?
@@ -392,9 +400,7 @@ impl Project {
             .get_snapshot_from_str("latest", |snap| {
                 if snap.hostname == self.config.name
                     && snap.tags.contains("sprt_obj:database")
-                    && snap
-                        .tags
-                        .contains(&format!("sprt_branch:{}", self.config.branch))
+                    && snap.tags.contains(&format!("sprt_branch:{}", branch))
                 {
                     return true;
                 }

@@ -1,4 +1,4 @@
-use crate::project::Project;
+use crate::{project::Project, PKG_VERSION};
 use capturing_glob::glob;
 use duration_macro::duration;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -106,10 +106,8 @@ pub fn snapshot(
 
     project.dump_database(&db_filename)?;
 
-    let backup_opts = BackupOptions::default().as_path(PathBuf::from(format!(
-        "/.sprout/{}/database/database.sql",
-        project.config.branch
-    )));
+    let backup_opts =
+        BackupOptions::default().as_path(PathBuf::from("/.sprout/database/database.sql"));
 
     let source = PathList::from_string(&db_filename.to_string_lossy())?;
 
@@ -126,6 +124,7 @@ pub fn snapshot(
             .as_str(),
         )?
         .host(project.config.name.to_owned())
+        .command(format!("sprout-{}", PKG_VERSION))
         .to_snapshot()?;
 
     // Create snapshot
@@ -135,10 +134,7 @@ pub fn snapshot(
 
     let database_snap_id = snap.id;
 
-    let backup_opts = BackupOptions::default().as_path(PathBuf::from(format!(
-        "/.sprout/{}/uploads",
-        project.config.branch
-    )));
+    let backup_opts = BackupOptions::default().as_path(PathBuf::from("/.sprout/uploads"));
     let source = PathList::from_string(
         &fs::canonicalize(&project.config.uploads_path)
             .unwrap()
@@ -158,6 +154,7 @@ pub fn snapshot(
             .as_str(),
         )?
         .host(project.config.name.to_owned())
+        .command(format!("sprout-{}", PKG_VERSION))
         .to_snapshot()?;
 
     // Create snapshot
@@ -177,19 +174,19 @@ pub fn restore(
 
     let ident = project.config.name.to_owned();
 
-    let node = repo.node_from_snapshot_path(
-        &format!("latest:/.sprout/{}/uploads", project.config.branch),
-        |snap| {
-            if snap.hostname == ident
-                && snap.tags.contains("sprt_obj:uploads")
-                && snap.tags.contains(&format!("sprt_db:{}", snap_id))
-            {
-                return true;
-            }
+    let node = repo.node_from_snapshot_path(&format!("latest:/.sprout/uploads"), |snap| {
+        if snap.hostname == ident
+            && snap.tags.contains("sprt_obj:uploads")
+            && snap.tags.contains(&format!("sprt_db:{}", snap_id))
+            && snap
+                .tags
+                .contains(&format!("sprt_branch:{}", project.config.branch))
+        {
+            return true;
+        }
 
-            false
-        },
-    )?;
+        false
+    })?;
 
     // use list of the snapshot contents using no additional filtering
     let streamer_opts = LsOptions::default();
@@ -208,16 +205,18 @@ pub fn restore(
 
     let dir = tempdir()?;
 
-    let node = repo.node_from_snapshot_path(
-        &format!("{}:/.sprout/{}/database", snap_id, project.config.branch),
-        |snap| {
-            if snap.hostname == ident && snap.tags.contains("sprt_obj:database") {
-                return true;
-            }
+    let node = repo.node_from_snapshot_path(&format!("{}:/.sprout/database", snap_id), |snap| {
+        if snap.hostname == ident
+            && snap.tags.contains("sprt_obj:database")
+            && snap
+                .tags
+                .contains(&format!("sprt_branch:{}", project.config.branch))
+        {
+            return true;
+        }
 
-            false
-        },
-    )?;
+        false
+    })?;
 
     // use list of the snapshot contents using no additional filtering
     let streamer_opts = LsOptions::default();
