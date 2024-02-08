@@ -2,7 +2,7 @@ use crate::{project::Project, PKG_VERSION};
 use capturing_glob::glob;
 use duration_macro::duration;
 use indicatif::{ProgressBar, ProgressStyle};
-use log::info;
+use log::{info, warn};
 use rustic_backend::BackendOptions;
 use rustic_core::{
     BackupOptions, ConfigOptions, Id, KeyOptions, LocalDestination, LsOptions, ParentOptions,
@@ -149,11 +149,15 @@ pub fn snapshot(
 
     if !automatic_parent {
         if let Some(parent_id) = project.config.snapshot.clone() {
-            let uploads_parent_id = project
-                .get_latest_uploads_snapshot_id_from_database_snapshot_id(parent_id, &repository)?;
-
-            backup_opts = backup_opts
-                .parent_opts(ParentOptions::default().parent(Some(uploads_parent_id.to_string())));
+            if let Ok(uploads_parent_id) = project
+                .get_latest_uploads_snapshot_id_from_database_snapshot_id(parent_id, &repository)
+            {
+                backup_opts = backup_opts.parent_opts(
+                    ParentOptions::default().parent(Some(uploads_parent_id.to_string())),
+                );
+            } else {
+                warn!("The snapshot ID in your `sprout.yaml` file does not exist in this repo. Using an automatic parent instead.");
+            }
         }
     }
 
@@ -326,6 +330,7 @@ impl ProgressBars for SproutProgressBar {
 
     fn progress_bytes(&self, _prefix: impl Into<Cow<'static, str>>) -> Self::P {
         let p = SproutProgress::new();
+        p.bar.enable_steady_tick(duration!(100 ms));
         p.bar.set_style(ProgressStyle::with_template("{spinner:^9.green} [{elapsed_precise:.dimmed}] [{wide_bar:.dimmed.cyan/blue}] {bytes:.dimmed}/{total_bytes:.dimmed} ({eta:.dimmed})")
         .unwrap()
         .progress_chars("#>-"));
