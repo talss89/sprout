@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha224};
 
 use crate::{
+    engine::get_sprout_config,
     repo::{Repositories, SproutProgressBar},
     theme::CliTheme,
 };
@@ -52,12 +53,25 @@ impl Project {
 
         let path = fs::canonicalize(path).unwrap();
 
+        let mut uploads_path = PathBuf::from("./wp-content/uploads");
+        let sprout_config = get_sprout_config()?;
+
+        if let Ok(installed) = Self::is_wordpress_installed(&path) {
+            if installed {
+                if let Ok(detected_uploads_path) = Self::get_uploads_dir(&path) {
+                    uploads_path = PathBuf::from(detected_uploads_path)
+                        .strip_prefix(&path)?
+                        .to_path_buf();
+                }
+            }
+        }
+
         let config = ProjectConfig {
             name: path.file_name().unwrap().to_string_lossy().into_owned(),
             branch: "main".to_string(),
             snapshot: None,
-            uploads_path: PathBuf::from("./wp-content/uploads"),
-            repo: "".to_string(), // TODO: Fetch last repo?
+            uploads_path,
+            repo: sprout_config.default_repo,
         };
 
         fs::write(path.join("./sprout.yaml"), serde_yaml::to_string(&config)?)?;
@@ -107,10 +121,10 @@ impl Project {
             .to_string())
     }
 
-    pub fn get_content_dir(&self) -> anyhow::Result<String> {
+    pub fn get_content_dir(path: &PathBuf) -> anyhow::Result<String> {
         let mut cmd = Command::new("wp");
 
-        cmd.current_dir(&self.path)
+        cmd.current_dir(path)
             .arg("config")
             .arg("get")
             .arg("WP_CONTENT_DIR")
@@ -128,10 +142,10 @@ impl Project {
             .to_string())
     }
 
-    pub fn get_uploads_dir(&self) -> anyhow::Result<String> {
+    pub fn get_uploads_dir(path: &PathBuf) -> anyhow::Result<String> {
         let mut cmd = Command::new("wp");
 
-        cmd.current_dir(&self.path)
+        cmd.current_dir(path)
             .arg("option")
             .arg("get")
             .arg("upload_path")
@@ -149,7 +163,7 @@ impl Project {
             .to_string();
 
         if upload_path == "" {
-            return Ok(format!("{}/uploads", self.get_content_dir()?));
+            return Ok(format!("{}/uploads", Self::get_content_dir(path)?));
         }
 
         return Ok(upload_path);
