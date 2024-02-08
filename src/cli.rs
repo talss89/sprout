@@ -56,11 +56,11 @@ pub struct RepoArgs {
 pub enum RepoCommand {
     /// Initialise a new repository
     Init(RepoInitArgs),
-
+    /// Create a new repository definition
     New(RepoNewArgs),
-
+    /// List all repositories
     List,
-
+    /// Set a default respoitory used when creating new projects
     Use(RepoUseArgs),
 }
 
