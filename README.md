@@ -29,18 +29,53 @@ An installer will come soon.
 
 Windows support is untested, and will require compilation with `cargo`.
 
-I wrote Sprout after years of being sent SQL files and gigabytes of TAR archives when working as a consultant on WordPress projects. There had to be a better way, and I think this is it.
+## Tutorial: Using Sprout for the first time
 
-**This is a very early preview release, and should be used only when you've backed up your databases and uploads. I'm not responsible for anything bad that happens.**
+**1. Set up a new Sprout repository**
 
+When using Sprout for the first time, you'll need to set up a repository. This is a location that will store all of your data. You'll usually want this to be some network storage of some kind (think S3?), but for the purposes of this demo, we will use a local directory.
 
-## How it works
+Let's create a repo definition:
 
-First, you'll need to set up a repository. This is essentially just a directory that will store your snapshots. `sprout repo init <repo-path>` will get you started. Set a secure access key, and make sure you keep it safe.
+`sprout repo new my-repo`
 
-Then, simply change into your WordPress project directory, and run `sprout init`. Customise the generated `sprout.yaml` and set the `repo.repository` to the path or URI of your repository you set up previously.
+Sprout will fire up a text editor, and let you customise the repo definiton. You can leave access_key blank (it'll be generated for you if so), but **make sure to set `repository` to a new local directory**. How about `/tmp/my-repo`?
 
-Once set up, you can snapshot your uploads and database. Run `sprout snap`, and Sprout will snapshot your uploads and database and push them to your repository. It will also update your `sprout.yaml` file to point to this latest snapshot. This means, when you commit the `sprout.yaml` and share with your team, they will be able to easily run `sprout seed` to easily pull down your snapshot and get up and running in no time.
+Save and quit the editor.
+
+Next, we will initialise the repo. If you were connecting to an existing Sprout repo, you could skip this next step.
+
+`sprout repo init my-repo`
+
+Sprout will generate an access key for you - this is the encryption key for your data. If you lose it, you lose your data. It will be stored in the repo definition file though, so don't worry about having it to hand all of the time.
+
+**2. Initialise your WordPress project**
+
+To create a `sprout.yaml` file, which will identify which exact version of database and uploads content should be used when seeding, make sure you're in an existing WordPress project and simply run:
+
+`sprout init`
+
+Sprout will open another editor, and let you customise the project name and other settings. The defaults should be fine (and Sprout will detect if you've moved your wp-uploads folder, like Bedrock or Radicle does).
+
+Close and save the editor. You can commit your new `sprout.yaml` to your git repo if you'd like.
+
+**3. Take a snapshot**
+
+Still inside the WordPress project, run
+
+`sprout snap`
+
+Sprout will then snapshot your database and entire wp-content folder and push it to the repo you just set up. It's that simple.
+
+Your `sprout.yaml` file will have been updated with the latest snapshot ID. If you commit and push this to git, other developers can easily seed from the snapshot you just took.
+
+**4. Seed the project**
+
+Let's pointlessly seed the project we've just snapshotted. Just run:
+
+`sprout seed`
+
+Sprout will first stash all of your database and wp-uploads content locally (to avoid any lost data), and then will restore from the snapshot that's described by your `sprout.yaml`.
 
 ### What's going on behind the scenes?
 
