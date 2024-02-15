@@ -15,7 +15,7 @@ use crate::{
     cli::{Options, RepoCommand, StashCommand, SubCommand},
     progress::SproutProgressBar,
     project::Project,
-    repo::{Repositories, RepositoryDefinition},
+    repo::definition::RepositoryDefinition,
     stash::Stash,
 };
 
@@ -24,6 +24,7 @@ mod engine;
 mod progress;
 mod project;
 mod repo;
+mod snapshot;
 mod stash;
 mod theme;
 
@@ -174,7 +175,7 @@ fn run() -> anyhow::Result<CliResponse> {
 
                 let mut sprout_config = crate::engine::get_sprout_config()?;
 
-                let (_, definition) = Repositories::get(&args.label)?;
+                let (_, definition) = RepositoryDefinition::get(&args.label)?;
 
                 sprout_config.default_repo = args.label.to_owned();
 
@@ -186,7 +187,7 @@ fn run() -> anyhow::Result<CliResponse> {
                 })
             }
             RepoCommand::List => {
-                let defs = Repositories::list()?;
+                let defs = RepositoryDefinition::list()?;
                 let sprout_config = crate::engine::get_sprout_config()?;
 
                 info!(
@@ -248,7 +249,7 @@ fn run() -> anyhow::Result<CliResponse> {
 
                 let repo_file = sprout_home.join(format!("repos/{}.yaml", &args.label));
 
-                Repositories::create(&definition, &repo_file)?;
+                RepositoryDefinition::create(&definition, &repo_file)?;
 
                 edit::edit_file(&repo_file)?;
 
@@ -291,7 +292,7 @@ fn run() -> anyhow::Result<CliResponse> {
 
                 let generated_access_key = pg.generate_one().unwrap();
 
-                let (definition_path, mut definition) = Repositories::get(&args.label)?;
+                let (definition_path, mut definition) = RepositoryDefinition::get(&args.label)?;
 
                 let access_key = match args.access_key {
                     Some(access_key) => access_key,
@@ -321,7 +322,7 @@ fn run() -> anyhow::Result<CliResponse> {
 
                 definition.access_key = access_key;
 
-                Repositories::save(&definition, &definition_path)?;
+                RepositoryDefinition::save(&definition, &definition_path)?;
 
                 info!("Sprout repo created at {}", &args.label);
 
@@ -339,7 +340,7 @@ fn run() -> anyhow::Result<CliResponse> {
 
             project.determine_home_url()?;
 
-            let (_, definition) = Repositories::get(&project.config.repo)?;
+            let (_, definition) = RepositoryDefinition::get(&project.config.repo)?;
 
             let repo = project.open_repo(definition.access_key)?;
 
@@ -404,7 +405,7 @@ fn run() -> anyhow::Result<CliResponse> {
 
             project.determine_home_url()?;
 
-            let (_, definition) = Repositories::get(&project.config.repo)?;
+            let (_, definition) = RepositoryDefinition::get(&project.config.repo)?;
 
             if !args.no_stash {
                 warn!("This command is destructive. Stashing your database and uploads locally.");
