@@ -3,11 +3,9 @@ use std::path::PathBuf;
 use log::{info, warn};
 use passwords::PasswordGenerator;
 use rustic_backend::BackendOptions;
-use rustic_core::{
-    repofile::SnapshotFile, ConfigOptions, Id, KeyOptions, Repository, RepositoryOptions,
-};
+use rustic_core::{repofile::SnapshotFile, ConfigOptions, Id, KeyOptions, RepositoryOptions};
 
-use crate::{engine::*, progress::SproutProgressBar, project::Project};
+use crate::{engine::*, project::Project, repo::RusticRepo};
 
 pub struct Stash {
     pub path: PathBuf,
@@ -56,7 +54,7 @@ impl Stash {
         Ok(())
     }
 
-    fn open_stash(&self) -> anyhow::Result<Repository<SproutProgressBar, ()>> {
+    fn open_stash(&self) -> anyhow::Result<RusticRepo> {
         let sprout_config = get_sprout_config()?;
         let backend =
             BackendOptions::default().repository(self.path.join("stash").to_string_lossy());

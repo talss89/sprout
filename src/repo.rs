@@ -13,72 +13,12 @@ use tempfile::tempdir;
 
 pub mod definition;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RepositoryDefinition {
-    pub access_key: String,
-
-    #[serde(flatten)]
-    pub repo: BackendOptions,
-}
-
-pub struct Repositories {}
-
-impl Repositories {
-    pub fn create(definition: &RepositoryDefinition, path: &PathBuf) -> anyhow::Result<()> {
-        if path.exists() {
-            return Err(anyhow::anyhow!(
-                "A repository definition at already exists with the same label!"
-            ));
-        }
-
-        Self::save(definition, path)
-    }
-
-    pub fn save(definition: &RepositoryDefinition, path: &PathBuf) -> anyhow::Result<()> {
-        fs::write(path, &serde_yaml::to_string(&definition)?)?;
-        Ok(())
-    }
-
-    pub fn list() -> anyhow::Result<Vec<(String, RepositoryDefinition)>> {
-        let mut results = vec![];
-
-        for entry in glob(&format!(
-            "{}/repos/(*).yaml",
-            crate::engine::get_sprout_home().to_string_lossy()
-        ))
-        .expect("Failed to read glob pattern")
-        {
-            match entry {
-                Ok(entry) => {
-                    let label = entry.group(1).unwrap().to_str().unwrap();
-                    results.push((String::from(label), Self::get(label)?.1));
-                }
-                _ => {}
-            }
-        }
-
-        Ok(results)
-    }
-
-    pub fn get(label: &str) -> anyhow::Result<(PathBuf, RepositoryDefinition)> {
-        let path = crate::engine::get_sprout_home().join(format!("repos/{}.yaml", label));
-
-        if !path.exists() {
-            return Err(anyhow::anyhow!(
-                "The repo definition for {} does not exist at {}",
-                label,
-                path.to_string_lossy()
-            ));
-        }
-
-        Ok((path.to_owned(), serde_yaml::from_slice(&fs::read(path)?)?))
-    }
-}
+pub type RusticRepo = Repository<SproutProgressBar, ()>;
 
 pub fn open_repo(
     backend: &BackendOptions,
     repo_opts: RepositoryOptions,
-) -> anyhow::Result<Repository<SproutProgressBar, ()>> {
+) -> anyhow::Result<RusticRepo> {
     // Initialize Backends
     let backends = backend.to_backends()?;
 
@@ -87,7 +27,7 @@ pub fn open_repo(
     Ok(repo)
 }
 
-pub fn initialise(repo: Repository<SproutProgressBar, ()>) -> anyhow::Result<()> {
+pub fn initialise(repo: RusticRepo) -> anyhow::Result<()> {
     let key_opts = KeyOptions::default();
     let config_opts = ConfigOptions::default();
     let _repo = repo.init(&key_opts, &config_opts)?;
@@ -97,7 +37,7 @@ pub fn initialise(repo: Repository<SproutProgressBar, ()>) -> anyhow::Result<()>
 }
 
 pub fn snapshot(
-    repository: Repository<SproutProgressBar, ()>,
+    repository: RusticRepo,
     project: &Project,
     automatic_parent: bool,
 ) -> anyhow::Result<Id> {
@@ -191,11 +131,7 @@ pub fn snapshot(
     Ok(database_snap_id)
 }
 
-pub fn restore(
-    repository: Repository<SproutProgressBar, ()>,
-    project: &Project,
-    snap_id: Id,
-) -> anyhow::Result<()> {
+pub fn restore(repository: RusticRepo, project: &Project, snap_id: Id) -> anyhow::Result<()> {
     let repo = repository.open()?.to_indexed()?;
 
     let ident = project.config.name.to_owned();
