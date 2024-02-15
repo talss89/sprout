@@ -12,9 +12,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha224};
 
 use crate::{
-    engine::get_sprout_config,
-    repo::{Repositories, SproutProgressBar},
-    theme::CliTheme,
+    engine::get_sprout_config, progress::SproutProgressBar, repo::Repositories, theme::CliTheme,
 };
 
 use colored::*;

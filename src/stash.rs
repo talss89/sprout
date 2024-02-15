@@ -4,10 +4,10 @@ use log::{info, warn};
 use passwords::PasswordGenerator;
 use rustic_backend::BackendOptions;
 use rustic_core::{
-    repofile::SnapshotFile, ConfigOptions, Id, KeyOptions, Repository, RepositoryOptions
+    repofile::SnapshotFile, ConfigOptions, Id, KeyOptions, Repository, RepositoryOptions,
 };
 
-use crate::{engine::*, project::Project, repo::SproutProgressBar};
+use crate::{engine::*, progress::SproutProgressBar, project::Project};
 
 pub struct Stash {
     pub path: PathBuf,
