@@ -12,14 +12,16 @@ use std::{fs, io::Write, time::SystemTime};
 use theme::CliTheme;
 
 use crate::{
-    cli::{Options, RepoCommand, SubCommand},
+    cli::{Options, RepoCommand, StashCommand, SubCommand},
+    progress::SproutProgressBar,
     project::Project,
-    repo::{Repositories, RepositoryDefinition, SproutProgressBar},
+    repo::{Repositories, RepositoryDefinition},
     stash::Stash,
 };
 
 mod cli;
 mod engine;
+mod progress;
 mod project;
 mod repo;
 mod stash;

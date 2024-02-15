@@ -1,16 +1,15 @@
-use crate::{project::Project, PKG_VERSION};
+use crate::{progress::SproutProgressBar, project::Project, PKG_VERSION};
 use capturing_glob::glob;
-use duration_macro::duration;
-use indicatif::{ProgressBar, ProgressStyle};
+
 use log::{info, warn};
 use rustic_backend::BackendOptions;
 use rustic_core::{
-    BackupOptions, ConfigOptions, Id, KeyOptions, LocalDestination, LsOptions, ParentOptions,
-    PathList, Progress, ProgressBars, Repository, RepositoryOptions, RestoreOptions,
+    repofile::SnapshotFile, BackupOptions, ConfigOptions, Id, KeyOptions, LocalDestination,
+    LsOptions, ParentOptions, PathList, Repository, RepositoryOptions, RestoreOptions,
     SnapshotOptions,
 };
 use serde::{Deserialize, Serialize};
-use std::{borrow::Cow, fs, path::PathBuf};
+use std::{fs, path::PathBuf};
 use tempfile::tempdir;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -264,95 +263,4 @@ pub fn restore(
     project.import_database(destination.join("database.sql"))?;
 
     Ok(())
-}
-
-#[derive(Clone, Debug)]
-pub struct SproutProgressBar {}
-#[derive(Clone, Debug)]
-pub struct SproutProgress {
-    pub bar: ProgressBar,
-}
-
-impl SproutProgress {
-    pub fn new() -> Self {
-        Self {
-            bar: ProgressBar::new(1024),
-        }
-    }
-
-    pub fn hidden() -> Self {
-        Self {
-            bar: ProgressBar::hidden(),
-        }
-    }
-
-    pub fn spinner() -> Self {
-        Self {
-            bar: ProgressBar::new_spinner(),
-        }
-    }
-}
-
-impl ProgressBars for SproutProgressBar {
-    type P = SproutProgress;
-
-    fn progress_hidden(&self) -> Self::P {
-        let p = SproutProgress::hidden();
-
-        p
-    }
-
-    fn progress_spinner(&self, prefix: impl Into<Cow<'static, str>>) -> Self::P {
-        let p = SproutProgress::spinner();
-
-        p.bar.set_message(prefix);
-
-        p.bar
-            .set_style(ProgressStyle::with_template("{spinner:^9.green} {msg}").unwrap());
-
-        p.bar.enable_steady_tick(duration!(100 ms));
-
-        p
-    }
-
-    fn progress_counter(&self, _prefix: impl Into<Cow<'static, str>>) -> Self::P {
-        let p = SproutProgress::new();
-        p.bar.set_style(
-            ProgressStyle::with_template(
-                "{spinner:^9.green} [{elapsed_precise:.dimmed}] [{wide_bar:.dimmed.cyan/blue}] {pos:.dimmed}/{len:.dimmed} ({eta:.dimmed})",
-            )
-            .unwrap()
-            .progress_chars("#>-"),
-        );
-
-        p
-    }
-
-    fn progress_bytes(&self, _prefix: impl Into<Cow<'static, str>>) -> Self::P {
-        let p = SproutProgress::new();
-        p.bar.enable_steady_tick(duration!(100 ms));
-        p.bar.set_style(ProgressStyle::with_template("{spinner:^9.green} [{elapsed_precise:.dimmed}] [{wide_bar:.dimmed.cyan/blue}] {bytes:.dimmed}/{total_bytes:.dimmed} ({eta:.dimmed})")
-        .unwrap()
-        .progress_chars("#>-"));
-
-        p
-    }
-}
-
-impl Progress for SproutProgress {
-    fn is_hidden(&self) -> bool {
-        self.bar.is_hidden()
-    }
-    fn set_length(&self, len: u64) {
-        self.bar.set_length(len)
-    }
-    fn set_title(&self, title: &'static str) {
-        self.bar.set_message(title);
-    }
-    fn inc(&self, inc: u64) {
-        self.bar.inc(inc);
-    }
-    fn finish(&self) {
-        self.bar.finish_and_clear();
-    }
 }
