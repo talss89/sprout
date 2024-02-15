@@ -12,7 +12,8 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha224};
 
 use crate::{
-    engine::get_sprout_config, progress::SproutProgressBar, repo::Repositories, theme::CliTheme,
+    engine::get_sprout_config, progress::SproutProgressBar, repo::definition::RepositoryDefinition,
+    theme::CliTheme,
 };
 
 use colored::*;
@@ -334,7 +335,7 @@ impl Project {
         access_key: String,
     ) -> anyhow::Result<Repository<SproutProgressBar, ()>> {
         let repo_opts = RepositoryOptions::default().password(access_key);
-        let (_, definition) = Repositories::get(self.config.repo.as_str())?;
+        let (_, definition) = RepositoryDefinition::get(self.config.repo.as_str())?;
         let repo = crate::repo::open_repo(&definition.repo, repo_opts)?;
 
         Ok(repo)
@@ -466,7 +467,7 @@ impl Project {
             format!(
                 "{} {}",
                 self.config.repo.dimmed().italic(),
-                match Repositories::get(&self.config.repo) {
+                match RepositoryDefinition::get(&self.config.repo) {
                     Err(_) => "UNKNOWN".to_string().red(),
                     Ok((_, definition)) => match definition.repo.repository {
                         None => "INVALID".to_string().red(),

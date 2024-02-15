@@ -1,5 +1,4 @@
 use crate::{progress::SproutProgressBar, project::Project, PKG_VERSION};
-use capturing_glob::glob;
 
 use log::{info, warn};
 use rustic_backend::BackendOptions;
@@ -8,9 +7,11 @@ use rustic_core::{
     LsOptions, ParentOptions, PathList, Repository, RepositoryOptions, RestoreOptions,
     SnapshotOptions,
 };
-use serde::{Deserialize, Serialize};
+
 use std::{fs, path::PathBuf};
 use tempfile::tempdir;
+
+pub mod definition;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RepositoryDefinition {
