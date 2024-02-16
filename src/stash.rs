@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use log::{info, warn};
 use passwords::PasswordGenerator;
 use rustic_backend::BackendOptions;
-use rustic_core::{repofile::SnapshotFile, ConfigOptions, Id, KeyOptions, RepositoryOptions};
+use rustic_core::{ConfigOptions, Id, KeyOptions, RepositoryOptions};
 
 use crate::{engine::*, project::Project, repo::ProjectRepository, snapshot::Snapshot};
 
@@ -68,10 +68,13 @@ impl Stash {
 
         let snapshot = repo.snapshot(true)?;
 
-        info!("Stashed with snapshot id {}", snapshot.id);
+        info!(
+            "Stashed with snapshot id {}",
+            snapshot.id.to_hex().to_string()
+        );
         info!(
             "To restore, run `sprout un-stash` or `sprout un-stash {}`",
-            snapshot.id
+            snapshot.id.to_hex().to_string()
         );
 
         Ok(())
@@ -98,36 +101,9 @@ impl Stash {
     pub fn get_all_stashes_for_project(
         &self,
         project: &Project,
-    ) -> anyhow::Result<Vec<(SnapshotFile, Option<SnapshotFile>)>> {
-        let repo: ProjectRepository = self.open_stash(project)?;
+    ) -> anyhow::Result<(Vec<Snapshot>, Vec<anyhow::Error>)> {
+        let repo = self.open_stash(project)?;
 
-        // let snapshots = repo
-        //     .repo
-        //     .open()?
-        //     .to_indexed_ids()?
-        //     .get_matching_snapshots(|snap| {
-        //         if snap.hostname == project.config.name && snap.tags.contains("sprt_obj:database") {
-        //             return true;
-        //         }
-
-        //         false
-        //     })
-        //     .unwrap_or(vec![])
-        //     .iter()
-        //     .map(|f| {
-        //         let uploads =
-        //             crate::repo::get_uploads_snapshot_by_db_snapshot_id((&repo.repo).clone(), f.id);
-
-        //         (
-        //             f.to_owned(),
-        //             match uploads {
-        //                 Err(_) => None,
-        //                 Ok(uploads) => Some(uploads),
-        //             },
-        //         )
-        //     })
-        //     .collect::<Vec<(SnapshotFile, Option<SnapshotFile>)>>();
-
-        Ok(vec![])
+        Ok(repo.get_all_snapshots_for_project(project)?)
     }
 }

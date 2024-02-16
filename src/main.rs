@@ -8,7 +8,6 @@ use log::{info, warn};
 use passwords::PasswordGenerator;
 use rustic_backend::BackendOptions;
 use rustic_core::{ConfigOptions, Id, KeyOptions, Progress, ProgressBars, RepositoryOptions};
-use sha2::digest::Key;
 use std::{io::Write, time::SystemTime};
 use theme::CliTheme;
 
@@ -503,11 +502,35 @@ fn run() -> anyhow::Result<CliResponse> {
 
                     let stash = Stash::new(sprout_home.join("stash"))?;
 
-                    let stashes = stash.get_all_stashes_for_project(&project)?;
+                    let (stashes, errors) = stash.get_all_stashes_for_project(&project)?;
+
+                    for err in errors {
+                        warn!("{}", err);
+                    }
+
+                    eprintln!("");
+                    eprintln!(
+                        "{}",
+                        format!("{:64} | {:16} | {}", "ID", "Branch", "Date / Time")
+                            .bold()
+                            .dimmed()
+                    );
+
+                    for stash in &stashes {
+                        eprintln!(
+                            "{}",
+                            format!(
+                                "{:64} | {:16} | {}",
+                                stash.id.to_hex().to_string(),
+                                stash.get_branch().unwrap_or("???".to_string()),
+                                stash.db_snapshot.time
+                            )
+                        );
+                    }
 
                     return Ok(CliResponse {
-                        msg: "no-op".to_string(),
-                        data: None,
+                        msg: format!("Listed all local stashes for {}", project.config.name),
+                        data: Some(serde_json::to_string(&stashes)?),
                     });
                 }
                 StashCommand::Drop => {

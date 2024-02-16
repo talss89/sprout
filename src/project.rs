@@ -8,8 +8,7 @@ use dialoguer::Input;
 
 use log::{info, warn};
 use rustic_core::{
-    Id, LocalDestination, LsOptions, Progress, ProgressBars, Repository, RepositoryOptions,
-    RestoreOptions,
+    Id, LocalDestination, LsOptions, Progress, ProgressBars, RepositoryOptions, RestoreOptions,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha224};
@@ -18,7 +17,7 @@ use tempfile::tempdir;
 use crate::{
     engine::get_sprout_config,
     progress::SproutProgressBar,
-    repo::{definition::RepositoryDefinition, ProjectRepository, RusticRepo},
+    repo::{definition::RepositoryDefinition, ProjectRepository},
     snapshot::Snapshot,
     theme::CliTheme,
 };

@@ -4,14 +4,15 @@ use log::{info, warn};
 use rustic_backend::BackendOptions;
 use rustic_core::{
     repofile::{Node, SnapshotFile},
-    BackupOptions, ConfigOptions, Id, KeyOptions, LocalDestination, LsOptions, OpenStatus,
-    ParentOptions, PathList, RepositoryOptions, RestoreOptions, SnapshotOptions,
+    BackupOptions, ConfigOptions, Id, KeyOptions, OpenStatus, ParentOptions, PathList,
+    RepositoryOptions, SnapshotOptions,
 };
 
 use std::{fs, path::PathBuf};
 use tempfile::tempdir;
 
 pub mod definition;
+use std::collections::HashMap;
 
 pub type RusticRepo<O> = rustic_core::Repository<SproutProgressBar, O>;
 
@@ -130,7 +131,7 @@ impl ProjectRepository {
                 .unwrap()
                 .to_string_lossy(),
         )?;
-        let snap = SnapshotOptions::default()
+        let mut snap = SnapshotOptions::default()
             .add_tags(
                 format!(
                     "sprt_obj:uploads,sprt_db:{},sprt_uniq:{},sprt_branch:{}",
@@ -144,8 +145,9 @@ impl ProjectRepository {
                 .as_str(),
             )?
             .host(self.project.config.name.to_owned())
-            .command(format!("sprout-{}", PKG_VERSION))
             .to_snapshot()?;
+
+        snap.program_version = format!("sprout-{}", PKG_VERSION);
 
         // Create snapshot
         Ok(repo.backup(&backup_opts, &source, snap)?)
@@ -204,6 +206,66 @@ impl ProjectRepository {
             })?;
 
         Ok(Snapshot::from_db_snapshot(&self.repo, &db_snapshot)?)
+    }
+
+    pub fn get_all_snapshots_for_project(
+        &self,
+        project: &Project,
+    ) -> anyhow::Result<(Vec<Snapshot>, Vec<anyhow::Error>)> {
+        let db_snapshots = self
+            .repo
+            .clone()
+            .open()?
+            .to_indexed_ids()?
+            .get_matching_snapshots(|snap| {
+                if snap.hostname == project.config.name {
+                    return true;
+                }
+
+                false
+            })?;
+
+        let mut db_snapshot_map: HashMap<String, SnapshotFile> = HashMap::new();
+        let mut uploads_snapshot_map: HashMap<String, SnapshotFile> = HashMap::new();
+        let mut errors = vec![];
+        let mut snapshots = vec![];
+
+        for snap in db_snapshots.iter() {
+            if snap.tags.contains("sprt_obj:database") {
+                db_snapshot_map.insert(snap.id.to_hex().to_string(), snap.clone());
+            } else if snap.tags.contains("sprt_obj:uploads") {
+                if let Ok(id) = Snapshot::get_sprout_tag(snap, "sprt_db") {
+                    uploads_snapshot_map.insert(id, snap.clone());
+                }
+            }
+        }
+
+        snapshots = db_snapshot_map
+            .into_iter()
+            .filter_map(|(id_string, snap)| {
+                if uploads_snapshot_map.contains_key(&id_string) {
+                    return match Id::from_hex(&id_string) {
+                        Ok(id) => Some(Snapshot {
+                            id,
+                            uploads_snapshot: uploads_snapshot_map.get(&id_string).unwrap().clone(),
+                            db_snapshot: snap.clone(),
+                        }),
+                        Err(e) => {
+                            errors.push(anyhow::anyhow!(e));
+                            None
+                        }
+                    };
+                } else {
+                    errors.push(anyhow::anyhow!(
+                        "Missing uploads snapshot for {}",
+                        &id_string
+                    ));
+                    return None;
+                }
+            })
+            .collect();
+
+        Ok((snapshots, errors))
     }
 
     pub fn get_latest_unique_hash(&self) -> anyhow::Result<Option<String>> {
