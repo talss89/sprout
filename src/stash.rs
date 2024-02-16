@@ -57,9 +57,9 @@ impl Stash {
         let sprout_config = get_sprout_config()?;
         let backend =
             BackendOptions::default().repository(self.path.join("stash").to_string_lossy());
-        let repo_opts = RepositoryOptions::default().password(&sprout_config.stash_key);
+        let repo_opts = RepositoryOptions::default().password(sprout_config.stash_key);
 
-        Ok(ProjectRepository::new(project, backend, repo_opts)?)
+        ProjectRepository::new(project, backend, repo_opts)
     }
 
     pub fn stash(&self, project: &Project) -> anyhow::Result<()> {
@@ -82,10 +82,10 @@ impl Stash {
 
     pub fn restore(&self, project: &Project, snap_id: Id) -> anyhow::Result<()> {
         info!("Restoring stash...");
-        let repo = self.open_stash(&project)?;
+        let repo = self.open_stash(project)?;
         let snapshot = Snapshot::from_db_snapshot_id(&repo.repo, snap_id)?;
 
-        let _id = project.restore_from_snapshot(&repo, &snapshot)?;
+        project.restore_from_snapshot(&repo, &snapshot)?;
 
         Ok(())
     }
@@ -93,7 +93,7 @@ impl Stash {
     pub fn get_latest_stash(&self, project: &Project) -> anyhow::Result<Snapshot> {
         let repo = self.open_stash(project)?;
 
-        let snapshot = repo.get_latest_snapshot(&project)?;
+        let snapshot = repo.get_latest_snapshot()?;
 
         Ok(snapshot)
     }
@@ -104,6 +104,6 @@ impl Stash {
     ) -> anyhow::Result<(Vec<Snapshot>, Vec<anyhow::Error>)> {
         let repo = self.open_stash(project)?;
 
-        Ok(repo.get_all_snapshots_for_project(project)?)
+        repo.get_all_snapshots_for_project(project)
     }
 }

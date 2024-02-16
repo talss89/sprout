@@ -23,7 +23,7 @@ impl RepositoryDefinition {
     }
 
     pub fn save(definition: &RepositoryDefinition, path: &PathBuf) -> anyhow::Result<()> {
-        fs::write(path, &serde_yaml::to_string(&definition)?)?;
+        fs::write(path, serde_yaml::to_string(&definition)?)?;
         Ok(())
     }
 
@@ -35,14 +35,10 @@ impl RepositoryDefinition {
             crate::engine::get_sprout_home().to_string_lossy()
         ))
         .expect("Failed to read glob pattern")
+        .flatten()
         {
-            match entry {
-                Ok(entry) => {
-                    let label = entry.group(1).unwrap().to_str().unwrap();
-                    results.push((String::from(label), Self::get(label)?.1));
-                }
-                _ => {}
-            }
+            let label = entry.group(1).unwrap().to_str().unwrap();
+            results.push((String::from(label), Self::get(label)?.1));
         }
 
         Ok(results)

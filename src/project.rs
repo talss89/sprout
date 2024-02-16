@@ -1,6 +1,6 @@
 use std::{
     fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
 };
 
@@ -109,14 +109,16 @@ impl Project {
 
     pub fn determine_home_url(&mut self) -> anyhow::Result<()> {
         let progress = SproutProgressBar {};
-        let spinner =
-            progress.progress_spinner(format!("Loading WordPress project with WP-CLI..."));
+        let spinner = progress.progress_spinner("Loading WordPress project with WP-CLI...");
 
         let home_url = match Self::get_home_url(&self.path) {
             Ok(url) => url,
             Err(e) => {
                 spinner.finish();
-                warn!("Couldn't query wp-cli to determine your current home URL.");
+                warn!(
+                    "Couldn't query wp-cli to determine your current home URL. {}",
+                    e
+                );
                 Input::with_theme(&CliTheme::default())
                     .with_prompt("Please enter your WP_HOME URL.")
                     .default(format!("https://{}.test", &self.config.name))
@@ -135,7 +137,7 @@ impl Project {
     pub fn get_home_url(path: &PathBuf) -> anyhow::Result<String> {
         let mut cmd = Command::new("wp");
 
-        cmd.current_dir(&path)
+        cmd.current_dir(path)
             .arg("option")
             .arg("get")
             .arg("home")
@@ -200,11 +202,11 @@ impl Project {
             .trim()
             .to_string();
 
-        if upload_path == "" {
+        if upload_path.is_empty() {
             return Ok(format!("{}/uploads", Self::get_content_dir(path)?));
         }
 
-        return Ok(upload_path);
+        Ok(upload_path)
     }
 
     pub fn generate_unique_hash(path: &PathBuf) -> anyhow::Result<Option<String>> {
@@ -231,19 +233,19 @@ impl Project {
         let first_sha = output
             .to_string()
             .trim()
-            .split("\n")
+            .split('\n')
             .last()
             .unwrap()
             .to_string();
 
-        let hash = Sha224::digest(format!("{}", first_sha));
+        let hash = Sha224::digest(first_sha);
 
         Ok(Some(format!("{:x}", hash)))
     }
 
-    pub fn dump_database(&self, path: &PathBuf) -> anyhow::Result<()> {
+    pub fn dump_database(&self, path: &Path) -> anyhow::Result<()> {
         let progress = SproutProgressBar {};
-        let spinner = progress.progress_spinner(format!("Exporting database..."));
+        let spinner = progress.progress_spinner("Exporting database...");
 
         let mut cmd = Command::new("wp");
 
@@ -268,7 +270,7 @@ impl Project {
         let mut cmd = Command::new("wp");
 
         let progress = SproutProgressBar {};
-        let spinner = progress.progress_spinner(format!("Importing database..."));
+        let spinner = progress.progress_spinner("Importing database...");
 
         cmd.current_dir(&self.path)
             .arg("db")
@@ -342,7 +344,7 @@ impl Project {
         let streamer_opts = LsOptions::default();
         let ls = rustic_repo.ls(&uploads_node, &streamer_opts)?;
 
-        let destination = fs::canonicalize(self.config.uploads_path.to_owned())?; // restore to this destination dir
+        let destination = fs::canonicalize(&self.config.uploads_path)?; // restore to this destination dir
         let create = true; // create destination dir, if it doesn't exist
         let dest = LocalDestination::new(
             &destination.to_string_lossy(),
@@ -379,7 +381,8 @@ impl Project {
         Ok(())
     }
 
-    pub fn print_header(&self) -> () {
+    #[allow(clippy::format_in_format_args)]
+    pub fn print_header(&self) {
         eprintln!(
             "{:^26} {}",
             "Name:".bold().cyan().dimmed(),
@@ -420,6 +423,6 @@ impl Project {
                 }
             )
         );
-        eprintln!("");
+        eprintln!();
     }
 }
