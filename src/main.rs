@@ -486,8 +486,11 @@ fn run() -> anyhow::Result<CliResponse> {
 
                 project.determine_home_url()?;
 
+                let stash = Stash::new(sprout_home.join("stash"))?;
+                stash.stash(&project)?;
+
                 Ok(CliResponse {
-                    msg: "no-op".to_string(),
+                    msg: "Created new stash".to_string(),
                     data: None,
                 })
             }
