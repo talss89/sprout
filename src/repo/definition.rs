@@ -3,7 +3,7 @@ use rustic_backend::BackendOptions;
 use serde::{Deserialize, Serialize};
 use std::{fs, path::PathBuf};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RepositoryDefinition {
     pub access_key: String,
 

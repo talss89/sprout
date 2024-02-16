@@ -7,18 +7,25 @@ use std::{
 use dialoguer::Input;
 
 use log::{info, warn};
-use rustic_core::{Id, Progress, ProgressBars, Repository, RepositoryOptions};
+use rustic_core::{
+    Id, LocalDestination, LsOptions, Progress, ProgressBars, Repository, RepositoryOptions,
+    RestoreOptions,
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha224};
+use tempfile::tempdir;
 
 use crate::{
-    engine::get_sprout_config, progress::SproutProgressBar, repo::definition::RepositoryDefinition,
+    engine::get_sprout_config,
+    progress::SproutProgressBar,
+    repo::{definition::RepositoryDefinition, ProjectRepository, RusticRepo},
+    snapshot::Snapshot,
     theme::CliTheme,
 };
 
 use colored::*;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct Project {
     pub path: PathBuf,
     pub config: ProjectConfig,
@@ -230,25 +237,6 @@ impl Project {
             .unwrap()
             .to_string();
 
-        // let mut cmd = Command::new("git");
-
-        // cmd.current_dir(path)
-        //     .arg("config")
-        //     .arg("get")
-        //     .arg("remote.origin.url")
-        //     .stderr(Stdio::null())
-        //     .stdin(Stdio::null())
-        //     .stdout(Stdio::piped());
-
-        // let mut child = cmd.spawn()?;
-
-        // let output = child.wait_with_output()?;
-        // let mut origin_url = String::from_utf8_lossy(&output.stdout).into_owned();
-
-        // if !output.status.success() {
-        //     origin_url = "_none_".to_string();
-        // }
-
         let hash = Sha224::digest(format!("{}", first_sha));
 
         Ok(Some(format!("{:x}", hash)))
@@ -330,109 +318,66 @@ impl Project {
         Ok(())
     }
 
-    pub fn open_repo(
-        &self,
-        access_key: String,
-    ) -> anyhow::Result<Repository<SproutProgressBar, ()>> {
+    pub fn open_repo(&self, access_key: &str) -> anyhow::Result<ProjectRepository> {
         let repo_opts = RepositoryOptions::default().password(access_key);
         let (_, definition) = RepositoryDefinition::get(self.config.repo.as_str())?;
-        let repo = crate::repo::open_repo(&definition.repo, repo_opts)?;
+        let repo = ProjectRepository::new(self, definition.repo, repo_opts)?;
 
         Ok(repo)
     }
 
-    pub fn snapshot(&self, repo: &Repository<SproutProgressBar, ()>) -> anyhow::Result<Id> {
-        crate::repo::snapshot(repo.clone(), self, false)
+    pub fn get_active_snapshot(&self, repo: &ProjectRepository) -> anyhow::Result<Snapshot> {
+        repo.get_latest_snapshot_for_branch(self, &self.config.branch)
     }
 
-    pub fn get_latest_unique_hash(
+    pub fn restore_from_snapshot(
         &self,
-        repo: &Repository<SproutProgressBar, ()>,
-    ) -> anyhow::Result<Option<String>> {
-        let node = repo
-            .clone()
-            .open()?
-            .to_indexed_ids()?
-            .get_snapshot_from_str("latest", |snap| {
-                if snap.hostname == self.config.name
-                    && snap.tags.contains("sprt_obj:database")
-                    && snap
-                        .tags
-                        .contains(&format!("sprt_branch:{}", self.config.branch))
-                {
-                    return true;
-                }
+        repo: &ProjectRepository,
+        snapshot: &Snapshot,
+    ) -> anyhow::Result<()> {
+        let rustic_repo = repo.repo.clone().open()?.to_indexed()?;
+        let uploads_node = repo.get_uploads_node(snapshot)?;
+        let db_node = repo.get_db_node(snapshot)?;
 
-                false
-            });
+        // use list of the snapshot contents using no additional filtering
+        let streamer_opts = LsOptions::default();
+        let ls = rustic_repo.ls(&uploads_node, &streamer_opts)?;
 
-        match node {
-            Err(_) => Ok(None),
+        let destination = fs::canonicalize(self.config.uploads_path.to_owned())?; // restore to this destination dir
+        let create = true; // create destination dir, if it doesn't exist
+        let dest = LocalDestination::new(
+            &destination.to_string_lossy(),
+            create,
+            !uploads_node.is_dir(),
+        )?;
 
-            Ok(file) => Ok(file
-                .tags
-                .iter()
-                .filter(|e| e.starts_with("sprt_uniq:"))
-                .map(|e| e.replace("sprt_uniq:", ""))
-                .collect::<Vec<String>>()
-                .first()
-                .cloned()),
-        }
-    }
+        let opts = RestoreOptions::default();
+        let dry_run = false;
+        // create restore infos. Note: this also already creates needed dirs in the destination
+        let restore_infos = rustic_repo.prepare_restore(&opts, ls.clone(), &dest, dry_run)?;
 
-    pub fn get_active_snapshot_id(
-        &self,
-        repo: &Repository<SproutProgressBar, ()>,
-    ) -> anyhow::Result<Id> {
-        self.get_latest_snapshot_id_for_branch(&self.config.branch, repo)
-    }
+        rustic_repo.restore(restore_infos, &opts, ls, &dest)?;
 
-    pub fn get_latest_snapshot_id_for_branch(
-        &self,
-        branch: &str,
-        repo: &Repository<SproutProgressBar, ()>,
-    ) -> anyhow::Result<Id> {
-        let node = repo
-            .clone()
-            .open()?
-            .to_indexed_ids()?
-            .get_snapshot_from_str("latest", |snap| {
-                if snap.hostname == self.config.name
-                    && snap.tags.contains("sprt_obj:database")
-                    && snap.tags.contains(&format!("sprt_branch:{}", branch))
-                {
-                    return true;
-                }
+        let dir = tempdir()?;
+        // use list of the snapshot contents using no additional filtering
+        let streamer_opts = LsOptions::default();
+        let ls = rustic_repo.ls(&db_node, &streamer_opts)?;
 
-                false
-            })?;
+        let destination = dir.path(); // restore to this destination dir
+        let create = true; // create destination dir, if it doesn't exist
+        let dest =
+            LocalDestination::new(&destination.to_string_lossy(), create, !db_node.is_dir())?;
 
-        Ok(node.id)
-    }
+        let opts = RestoreOptions::default();
+        let dry_run = false;
+        // create restore infos. Note: this also already creates needed dirs in the destination
+        let restore_infos = rustic_repo.prepare_restore(&opts, ls.clone(), &dest, dry_run)?;
 
-    pub fn get_latest_uploads_snapshot_id_from_database_snapshot_id(
-        &self,
-        database_id: Id,
-        repo: &Repository<SproutProgressBar, ()>,
-    ) -> anyhow::Result<Id> {
-        let node = repo
-            .clone()
-            .open()?
-            .to_indexed_ids()?
-            .get_snapshot_from_str("latest", |snap| {
-                if snap.hostname == self.config.name
-                    && snap.tags.contains("sprt_obj:uploads")
-                    && snap
-                        .tags
-                        .contains(&format!("sprt_db:{}", database_id.to_hex().as_str()))
-                {
-                    return true;
-                }
+        rustic_repo.restore(restore_infos, &opts, ls, &dest)?;
 
-                false
-            })?;
+        self.import_database(destination.join("database.sql"))?;
 
-        Ok(node.id)
+        Ok(())
     }
 
     pub fn print_header(&self) -> () {
