@@ -241,7 +241,7 @@ impl ProjectRepository {
             }
         }
 
-        let snapshots = db_snapshot_map
+        let mut snapshots: Vec<Snapshot> = db_snapshot_map
             .into_iter()
             .filter_map(|(id_string, snap)| {
                 if uploads_snapshot_map.contains_key(&id_string) {
@@ -265,6 +265,8 @@ impl ProjectRepository {
                 }
             })
             .collect();
+
+        snapshots.sort_by(|a, b| b.db_snapshot.time.cmp(&a.db_snapshot.time));
 
         Ok((snapshots, errors))
     }
