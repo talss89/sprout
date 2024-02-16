@@ -31,6 +31,8 @@ pub enum SubCommand {
     Seed(SeedArgs),
     /// Restore a locally stashed database and uploads directory
     UnStash(UnStashArgs),
+    /// Manage your stashes
+    Stash(StashArgs),
 }
 
 #[derive(Args, Debug)]
@@ -52,6 +54,12 @@ pub struct RepoArgs {
     pub subcommand: RepoCommand,
 }
 
+#[derive(Args, Debug)]
+pub struct StashArgs {
+    #[clap(subcommand)]
+    pub subcommand: Option<StashCommand>,
+}
+
 #[derive(Subcommand, Debug)]
 pub enum RepoCommand {
     /// Initialise a new repository
@@ -62,6 +70,12 @@ pub enum RepoCommand {
     List,
     /// Set a default respoitory used when creating new projects
     Use(RepoUseArgs),
+}
+
+#[derive(Subcommand, Debug)]
+pub enum StashCommand {
+    List,
+    Drop,
 }
 
 #[derive(Args, Debug)]

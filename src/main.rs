@@ -7,15 +7,16 @@ use env_logger::Builder;
 use log::{info, warn};
 use passwords::PasswordGenerator;
 use rustic_backend::BackendOptions;
-use rustic_core::{Id, Progress, ProgressBars, RepositoryOptions};
-use std::{fs, io::Write, time::SystemTime};
+use rustic_core::{ConfigOptions, Id, KeyOptions, Progress, ProgressBars, RepositoryOptions};
+use sha2::digest::Key;
+use std::{io::Write, time::SystemTime};
 use theme::CliTheme;
 
 use crate::{
     cli::{Options, RepoCommand, StashCommand, SubCommand},
     progress::SproutProgressBar,
     project::Project,
-    repo::definition::RepositoryDefinition,
+    repo::{definition::RepositoryDefinition, ProjectRepository},
     stash::Stash,
 };
 
@@ -315,8 +316,12 @@ fn run() -> anyhow::Result<CliResponse> {
 
                 let repo_opts = RepositoryOptions::default().password(&access_key);
 
-                let repo = crate::repo::open_repo(&definition.repo, repo_opts)?;
-                let repo = crate::repo::initialise(repo)?;
+                let _ = ProjectRepository::initialise(
+                    definition.repo.clone(),
+                    repo_opts,
+                    KeyOptions::default(),
+                    ConfigOptions::default(),
+                )?;
 
                 spinner.finish();
 
@@ -328,7 +333,7 @@ fn run() -> anyhow::Result<CliResponse> {
 
                 return Ok(CliResponse {
                     msg: "Sprout repository initialised".to_string(),
-                    data: Some(serde_json::to_string(&repo)?),
+                    data: Some(serde_json::to_string(&definition)?),
                 });
             }
         },
@@ -342,7 +347,7 @@ fn run() -> anyhow::Result<CliResponse> {
 
             let (_, definition) = RepositoryDefinition::get(&project.config.repo)?;
 
-            let repo = project.open_repo(definition.access_key)?;
+            let repo = project.open_repo(&definition.access_key)?;
 
             if let Some(branch) = args.branch {
                 if branch != project.config.branch {
@@ -370,7 +375,7 @@ fn run() -> anyhow::Result<CliResponse> {
                 project.config.name, project.config.branch
             );
 
-            let latest_hash = project.get_latest_unique_hash(&repo)?;
+            let latest_hash = repo.get_latest_unique_hash()?;
 
             if let Some(id) = latest_hash {
                 if let Some(local_id) = &project.unique_hash {
@@ -388,13 +393,13 @@ fn run() -> anyhow::Result<CliResponse> {
 
             info!("Starting snapshot...");
 
-            let id = project.snapshot(&repo)?;
+            let snapshot = repo.snapshot(false)?;
 
-            project.update_snapshot_id(id, project.config.branch.to_owned())?;
+            project.update_snapshot_id(snapshot.id, project.config.branch.to_owned())?;
 
             return Ok(CliResponse {
                 msg: "Snapshot created".to_string(),
-                data: Some(serde_json::to_string(&id)?),
+                data: Some(serde_json::to_string(&snapshot.id)?),
             });
         }
 
@@ -427,11 +432,11 @@ fn run() -> anyhow::Result<CliResponse> {
                 }
             }
 
-            let repo = project.open_repo(definition.access_key)?;
+            let repo = project.open_repo(&definition.access_key)?;
 
-            let snap_id = project.get_active_snapshot_id(&repo)?;
+            let snapshot = project.get_active_snapshot(&repo)?;
 
-            crate::repo::restore(repo, &project, snap_id)?;
+            project.restore_from_snapshot(&repo, &snapshot)?;
 
             return Ok(CliResponse {
                 msg: "Content and database seeded".to_string(),
@@ -476,5 +481,42 @@ fn run() -> anyhow::Result<CliResponse> {
                 data: None,
             });
         }
+
+        SubCommand::Stash(args) => match args.subcommand {
+            None => {
+                let mut project = Project::new(options.path.to_owned())?;
+
+                project.print_header();
+
+                project.determine_home_url()?;
+
+                return Ok(CliResponse {
+                    msg: "no-op".to_string(),
+                    data: None,
+                });
+            }
+            Some(subcommand) => match subcommand {
+                StashCommand::List => {
+                    let project = Project::new(options.path.to_owned())?;
+
+                    project.print_header();
+
+                    let stash = Stash::new(sprout_home.join("stash"))?;
+
+                    let stashes = stash.get_all_stashes_for_project(&project)?;
+
+                    return Ok(CliResponse {
+                        msg: "no-op".to_string(),
+                        data: None,
+                    });
+                }
+                StashCommand::Drop => {
+                    return Ok(CliResponse {
+                        msg: "no-op".to_string(),
+                        data: None,
+                    });
+                }
+            },
+        },
     }
 }
