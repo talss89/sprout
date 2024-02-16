@@ -128,6 +128,10 @@ impl ProjectRepository {
 
         let repo = repo.clone().open()?.to_indexed_ids()?;
 
+        if !self.project.config.uploads_path.exists() {
+            fs::create_dir_all(&self.project.config.uploads_path)?;
+        }
+
         let source = PathList::from_string(
             &fs::canonicalize(&self.project.config.uploads_path)
                 .unwrap()
