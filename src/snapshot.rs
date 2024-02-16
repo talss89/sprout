@@ -1,10 +1,9 @@
-use rustic_core::{
-    repofile::{Node, SnapshotFile},
-    Id,
-};
+use rustic_core::{repofile::SnapshotFile, Id};
+use serde::Serialize;
 
 use crate::repo::RusticRepo;
 
+#[derive(Debug, Serialize, Clone)]
 pub struct Snapshot {
     pub id: Id,
     pub uploads_snapshot: SnapshotFile,
@@ -66,5 +65,25 @@ impl Snapshot {
             db_snapshot: db_snapshot.clone(),
             uploads_snapshot,
         })
+    }
+
+    pub fn get_sprout_tag(snapshot: &SnapshotFile, key: &str) -> anyhow::Result<String> {
+        let prefix = format!("{}:", key);
+        let tags = snapshot.tags.iter().filter(|t| t.starts_with(&prefix));
+
+        if tags.clone().count() > 0 {
+            return Ok(tags
+                .last()
+                .unwrap()
+                .strip_prefix(&prefix)
+                .unwrap()
+                .to_string());
+        } else {
+            return Err(anyhow::anyhow!("Could not find tag {}", key));
+        }
+    }
+
+    pub fn get_branch(&self) -> anyhow::Result<String> {
+        Self::get_sprout_tag(&self.db_snapshot, "sprt_branch")
     }
 }
