@@ -70,12 +70,14 @@ impl ProjectRepository {
             BackupOptions::default().as_path(PathBuf::from("/.sprout/database/database.sql"));
 
         if !automatic_parent {
-            backup_opts = backup_opts.parent_opts(ParentOptions::default().parent(
-                match self.project.config.snapshot {
-                    Some(id) => Some(id.to_string()),
-                    None => None,
-                },
-            ));
+            backup_opts = backup_opts.parent_opts(
+                ParentOptions::default().parent(
+                    self.project
+                        .config
+                        .snapshot
+                        .map(|id| id.to_hex().to_string()),
+                ),
+            );
         }
 
         let source = PathList::from_string(&db_filename.to_string_lossy())?;
@@ -113,8 +115,8 @@ impl ProjectRepository {
         let mut backup_opts = BackupOptions::default().as_path(PathBuf::from("/.sprout/uploads"));
 
         if !automatic_parent {
-            if let Some(parent_id) = self.project.config.snapshot.clone() {
-                if let Ok(parent_snapshot) = Snapshot::from_db_snapshot_id(&repo, parent_id) {
+            if let Some(parent_id) = self.project.config.snapshot {
+                if let Ok(parent_snapshot) = Snapshot::from_db_snapshot_id(repo, parent_id) {
                     backup_opts = backup_opts.parent_opts(ParentOptions::default().parent(Some(
                         parent_snapshot.uploads_snapshot.id.to_hex().to_string(),
                     )));
@@ -159,13 +161,13 @@ impl ProjectRepository {
             self.snapshot_uploads(&self.repo, db_snapshot.id, automatic_parent)?;
 
         Ok(Snapshot {
-            id: db_snapshot.id.clone(),
+            id: db_snapshot.id,
             db_snapshot,
             uploads_snapshot,
         })
     }
 
-    pub fn get_latest_snapshot(&self, project: &Project) -> anyhow::Result<Snapshot> {
+    pub fn get_latest_snapshot(&self) -> anyhow::Result<Snapshot> {
         let db_snapshot = self
             .repo
             .clone()
@@ -181,7 +183,7 @@ impl ProjectRepository {
                 false
             })?;
 
-        Ok(Snapshot::from_db_snapshot(&self.repo, &db_snapshot)?)
+        Snapshot::from_db_snapshot(&self.repo, &db_snapshot)
     }
 
     pub fn get_latest_snapshot_for_branch(
@@ -205,7 +207,7 @@ impl ProjectRepository {
                 false
             })?;
 
-        Ok(Snapshot::from_db_snapshot(&self.repo, &db_snapshot)?)
+        Snapshot::from_db_snapshot(&self.repo, &db_snapshot)
     }
 
     pub fn get_all_snapshots_for_project(
@@ -228,7 +230,6 @@ impl ProjectRepository {
         let mut db_snapshot_map: HashMap<String, SnapshotFile> = HashMap::new();
         let mut uploads_snapshot_map: HashMap<String, SnapshotFile> = HashMap::new();
         let mut errors = vec![];
-        let mut snapshots = vec![];
 
         for snap in db_snapshots.iter() {
             if snap.tags.contains("sprt_obj:database") {
@@ -240,7 +241,7 @@ impl ProjectRepository {
             }
         }
 
-        snapshots = db_snapshot_map
+        let snapshots = db_snapshot_map
             .into_iter()
             .filter_map(|(id_string, snap)| {
                 if uploads_snapshot_map.contains_key(&id_string) {
@@ -260,7 +261,7 @@ impl ProjectRepository {
                         "Missing uploads snapshot for {}",
                         &id_string
                     ));
-                    return None;
+                    None
                 }
             })
             .collect();
@@ -305,7 +306,7 @@ impl ProjectRepository {
         let repo = self.repo.clone().open()?.to_indexed()?;
 
         Ok(
-            repo.node_from_snapshot_path(&format!("latest:/.sprout/uploads"), |snap| {
+            repo.node_from_snapshot_path("latest:/.sprout/uploads", |snap| {
                 if snap.hostname == self.project.config.name
                     && snap.tags.contains("sprt_obj:uploads")
                     && snap

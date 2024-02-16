@@ -14,14 +14,13 @@ impl Snapshot {
     pub fn from_db_snapshot_id(repo: &RusticRepo<()>, db_snapshot_id: Id) -> anyhow::Result<Self> {
         let repo = repo.clone().open()?.to_indexed()?;
 
-        let db_snapshot =
-            repo.get_snapshot_from_str(&db_snapshot_id.to_hex().to_string(), |snap| {
-                if snap.tags.contains("sprt_obj:database") && snap.id == db_snapshot_id {
-                    return true;
-                }
+        let db_snapshot = repo.get_snapshot_from_str(&db_snapshot_id.to_hex(), |snap| {
+            if snap.tags.contains("sprt_obj:database") && snap.id == db_snapshot_id {
+                return true;
+            }
 
-                false
-            })?;
+            false
+        })?;
 
         let uploads_snapshot = repo.get_snapshot_from_str("latest", |snap| {
             if snap.tags.contains("sprt_obj:uploads")
@@ -79,7 +78,7 @@ impl Snapshot {
                 .unwrap()
                 .to_string());
         } else {
-            return Err(anyhow::anyhow!("Could not find tag {}", key));
+            Err(anyhow::anyhow!("Could not find tag {}", key))
         }
     }
 

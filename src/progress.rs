@@ -35,9 +35,7 @@ impl ProgressBars for SproutProgressBar {
     type P = SproutProgress;
 
     fn progress_hidden(&self) -> Self::P {
-        let p = SproutProgress::hidden();
-
-        p
+        SproutProgress::hidden()
     }
 
     fn progress_spinner(&self, prefix: impl Into<Cow<'static, str>>) -> Self::P {

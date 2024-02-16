@@ -52,11 +52,8 @@ fn main() {
             );
 
             if options.json {
-                match response.data {
-                    Some(data) => {
-                        println!("{}", data)
-                    }
-                    None => {}
+                if let Some(data) = response.data {
+                    println!("{}", data)
                 }
             }
 
@@ -82,7 +79,7 @@ fn main() {
         }
     }
 }
-
+#[allow(clippy::format_in_format_args)]
 fn run() -> anyhow::Result<CliResponse> {
     let options = Options::parse();
 
@@ -124,7 +121,7 @@ fn run() -> anyhow::Result<CliResponse> {
                         .to_string()
                         .contains("operation=stat path=config -> NotFound (persistent)"))
             {
-                if let Err(_) = std::env::var("SPROUT_DEBUG_RUSTIC") {
+                if std::env::var("SPROUT_DEBUG_RUSTIC").is_err() {
                     return Ok(());
                 }
 
@@ -163,10 +160,10 @@ fn run() -> anyhow::Result<CliResponse> {
 
             info!("Your project is ready.");
 
-            return Ok(CliResponse {
+            Ok(CliResponse {
                 msg: "Project initialised".to_string(),
                 data: Some(serde_json::to_string(&project)?),
-            });
+            })
         }
 
         SubCommand::Repo(args) => match args.subcommand {
@@ -195,7 +192,7 @@ fn run() -> anyhow::Result<CliResponse> {
                     crate::engine::get_sprout_home().join("repos").display()
                 );
 
-                eprintln!("");
+                eprintln!();
                 eprintln!(
                     "{}",
                     format!("{:32} | {}", "Repository Label", "Repository URI / Path")
@@ -255,7 +252,7 @@ fn run() -> anyhow::Result<CliResponse> {
 
                 let mut sprout_config = crate::engine::get_sprout_config()?;
 
-                if sprout_config.default_repo == "" {
+                if sprout_config.default_repo.is_empty() {
                     info!("Setting default repo to {}", &args.label);
 
                     sprout_config.default_repo = args.label.to_owned();
@@ -297,7 +294,7 @@ fn run() -> anyhow::Result<CliResponse> {
                 let access_key = match args.access_key {
                     Some(access_key) => access_key,
                     None => {
-                        if definition.access_key == "" {
+                        if definition.access_key.is_empty() {
                             Input::with_theme(&CliTheme::default())
                                 .with_prompt("Please set a secure access key for this repository.")
                                 .default(generated_access_key.to_string())
@@ -330,10 +327,10 @@ fn run() -> anyhow::Result<CliResponse> {
 
                 info!("Sprout repo created at {}", &args.label);
 
-                return Ok(CliResponse {
+                Ok(CliResponse {
                     msg: "Sprout repository initialised".to_string(),
                     data: Some(serde_json::to_string(&definition)?),
-                });
+                })
             }
         },
 
@@ -396,10 +393,10 @@ fn run() -> anyhow::Result<CliResponse> {
 
             project.update_snapshot_id(snapshot.id, project.config.branch.to_owned())?;
 
-            return Ok(CliResponse {
+            Ok(CliResponse {
                 msg: "Snapshot created".to_string(),
                 data: Some(serde_json::to_string(&snapshot.id)?),
-            });
+            })
         }
 
         SubCommand::Seed(args) => {
@@ -437,10 +434,10 @@ fn run() -> anyhow::Result<CliResponse> {
 
             project.restore_from_snapshot(&repo, &snapshot)?;
 
-            return Ok(CliResponse {
+            Ok(CliResponse {
                 msg: "Content and database seeded".to_string(),
                 data: Some(serde_json::to_string(&project)?),
-            });
+            })
         }
 
         SubCommand::UnStash(args) => {
@@ -471,14 +468,14 @@ fn run() -> anyhow::Result<CliResponse> {
 
             stash.restore(&project, snap_id)?;
 
-            return Ok(CliResponse {
+            Ok(CliResponse {
                 msg: format!(
                     "Restored the stash of {} ({})",
                     project.config.name, &snap_id
                 )
                 .to_string(),
                 data: None,
-            });
+            })
         }
 
         SubCommand::Stash(args) => match args.subcommand {
@@ -489,10 +486,10 @@ fn run() -> anyhow::Result<CliResponse> {
 
                 project.determine_home_url()?;
 
-                return Ok(CliResponse {
+                Ok(CliResponse {
                     msg: "no-op".to_string(),
                     data: None,
-                });
+                })
             }
             Some(subcommand) => match subcommand {
                 StashCommand::List => {
@@ -508,7 +505,7 @@ fn run() -> anyhow::Result<CliResponse> {
                         warn!("{}", err);
                     }
 
-                    eprintln!("");
+                    eprintln!();
                     eprintln!(
                         "{}",
                         format!("{:64} | {:16} | {}", "ID", "Branch", "Date / Time")
@@ -528,17 +525,15 @@ fn run() -> anyhow::Result<CliResponse> {
                         );
                     }
 
-                    return Ok(CliResponse {
+                    Ok(CliResponse {
                         msg: format!("Listed all local stashes for {}", project.config.name),
                         data: Some(serde_json::to_string(&stashes)?),
-                    });
+                    })
                 }
-                StashCommand::Drop => {
-                    return Ok(CliResponse {
-                        msg: "no-op".to_string(),
-                        data: None,
-                    });
-                }
+                StashCommand::Drop => Ok(CliResponse {
+                    msg: "no-op".to_string(),
+                    data: None,
+                }),
             },
         },
     }

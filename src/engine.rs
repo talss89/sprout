@@ -30,7 +30,7 @@ pub fn ensure_sprout_home() -> anyhow::Result<()> {
             "Sprout home directory {} doesn't exist. Creating...",
             &sprout_home.join("repos").to_string_lossy()
         );
-        fs::create_dir(&sprout_home.join("repos"))?;
+        fs::create_dir(sprout_home.join("repos"))?;
     }
 
     if !&sprout_home.join("sprout-config.yaml").exists() {
