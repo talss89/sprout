@@ -533,10 +533,38 @@ fn run() -> anyhow::Result<CliResponse> {
                         data: Some(serde_json::to_string(&stashes)?),
                     })
                 }
-                StashCommand::Drop => Ok(CliResponse {
-                    msg: "no-op".to_string(),
-                    data: None,
-                }),
+                StashCommand::Drop(args) => {
+                    let stash = Stash::new(sprout_home.join("stash"))?;
+
+                    let snapshot = stash.get_stash_by_id(Id::from_hex(&args.snapshot_id)?)?;
+
+                    info!("Stash snapshot found: {}", snapshot.id);
+
+                    info!(
+                        "Stashed snapshot is for the {} branch on the {} project",
+                        snapshot.get_branch()?,
+                        snapshot.get_project_name()
+                    );
+
+                    let confirmation = Confirm::with_theme(&CliTheme::default())
+                        .with_prompt("Are you sure you want to drop this stashed snapshot?")
+                        .interact()
+                        .unwrap();
+
+                    if !confirmation {
+                        return Ok(CliResponse {
+                            msg: "Aborted by user, but no error".to_string(),
+                            data: None,
+                        });
+                    }
+
+                    stash.drop(Id::from_hex(&args.snapshot_id)?)?;
+
+                    Ok(CliResponse {
+                        msg: "Dropped the stashed snapshot".to_string(),
+                        data: None,
+                    })
+                }
             },
         },
     }

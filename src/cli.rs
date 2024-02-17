@@ -75,7 +75,7 @@ pub enum RepoCommand {
 #[derive(Subcommand, Debug)]
 pub enum StashCommand {
     List,
-    Drop,
+    Drop(StashDropArgs),
 }
 
 #[derive(Args, Debug)]
@@ -108,6 +108,13 @@ pub struct UnStashArgs {
     /// Restore a particular stash snapshot by ID. This will not check project or branch constraints - use with caution.
     #[arg(index = 1)]
     pub snapshot_id: Option<String>,
+}
+
+#[derive(Args, Debug)]
+pub struct StashDropArgs {
+    /// Drop a particular stash snapshot by ID. This will not check project or branch constraints - use with caution.
+    #[arg(index = 1)]
+    pub snapshot_id: String,
 }
 
 pub struct CliResponse {

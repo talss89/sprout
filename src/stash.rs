@@ -5,7 +5,12 @@ use passwords::PasswordGenerator;
 use rustic_backend::BackendOptions;
 use rustic_core::{ConfigOptions, Id, KeyOptions, RepositoryOptions};
 
-use crate::{engine::*, project::Project, repo::ProjectRepository, snapshot::Snapshot};
+use crate::{
+    engine::*,
+    project::Project,
+    repo::{ProjectRepository, RusticRepo, RusticRepoFactory},
+    snapshot::Snapshot,
+};
 
 pub struct Stash {
     pub path: PathBuf,
@@ -62,6 +67,15 @@ impl Stash {
         ProjectRepository::new(project, backend, repo_opts)
     }
 
+    fn direct_open_stash(&self) -> anyhow::Result<RusticRepo<()>> {
+        let sprout_config = get_sprout_config()?;
+        let backend =
+            BackendOptions::default().repository(self.path.join("stash").to_string_lossy());
+        let repo_opts = RepositoryOptions::default().password(sprout_config.stash_key);
+
+        RusticRepo::<()>::open_repo(backend, repo_opts)
+    }
+
     pub fn stash(&self, project: &Project) -> anyhow::Result<()> {
         info!("Stashing {}...", project.config.name);
         let repo = self.open_stash(project)?;
@@ -96,6 +110,28 @@ impl Stash {
         let snapshot = repo.get_latest_snapshot()?;
 
         Ok(snapshot)
+    }
+
+    pub fn get_stash_by_id(&self, id: Id) -> anyhow::Result<Snapshot> {
+        let repo = self.direct_open_stash()?;
+
+        let snapshot = Snapshot::from_db_snapshot_id(&repo, id)?;
+
+        Ok(snapshot)
+    }
+
+    pub fn drop(&self, id: Id) -> anyhow::Result<()> {
+        let repo = self.direct_open_stash()?;
+
+        let snapshot = Snapshot::from_db_snapshot_id(&repo, id)?;
+
+        let repo = repo.open()?;
+
+        let ids = vec![snapshot.db_snapshot.id, snapshot.uploads_snapshot.id];
+
+        repo.delete_snapshots(&ids)?;
+
+        Ok(())
     }
 
     pub fn get_all_stashes_for_project(

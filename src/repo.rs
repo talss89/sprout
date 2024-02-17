@@ -16,6 +16,21 @@ use std::collections::HashMap;
 
 pub type RusticRepo<O> = rustic_core::Repository<SproutProgressBar, O>;
 
+pub trait RusticRepoFactory {
+    fn open_repo(
+        backend: BackendOptions,
+        repo_opts: RepositoryOptions,
+    ) -> anyhow::Result<RusticRepo<()>> {
+        Ok(rustic_core::Repository::new_with_progress(
+            &repo_opts,
+            backend.to_backends()?,
+            SproutProgressBar {},
+        )?)
+    }
+}
+
+impl<O> RusticRepoFactory for RusticRepo<O> {}
+
 pub struct ProjectRepository {
     pub repo: RusticRepo<()>,
     project: Project,
@@ -27,11 +42,7 @@ impl ProjectRepository {
         backend: BackendOptions,
         repo_opts: RepositoryOptions,
     ) -> anyhow::Result<Self> {
-        let repo = rustic_core::Repository::new_with_progress(
-            &repo_opts,
-            backend.to_backends()?,
-            SproutProgressBar {},
-        )?;
+        let repo = RusticRepo::<()>::open_repo(backend, repo_opts)?;
 
         Ok(Self {
             repo,
