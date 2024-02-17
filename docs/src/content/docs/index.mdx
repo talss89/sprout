@@ -1,0 +1,52 @@
+---
+title: Sprout
+description: Fast, deduplicated content seeding for WordPress
+template: splash
+hero:
+  tagline: Fast, deduplicated content seeding for WordPress. Make Sprout part of your workflow.
+  actions:
+    - text: Install Sprout
+      link: /install
+      icon: right-arrow
+      variant: primary
+    - text: Command Reference
+      link: /reference/command-reference
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<CardGrid stagger>
+	<Card title="No more 'Can I get a DB dump?'">
+		Store your uploads and database in a secure, central location and easily let your team get up and running with the correct version of content **with a one-liner - `sprout seed`**.
+	</Card>
+
+	<Card title="Unobtrusive">
+		Sprout lets you commit a small `sprout.yaml` file as part of your WordPress project. It identifies the **exact version of database and wp-uploads content** required in order to seed a new environment.
+	</Card>
+
+	<Card title="Store anywhere">
+		You can store your database and content in a Sprout repo - this can be a local path, SFTP, S3 bucket, or any number of supported backends via OpenDAL or rclone. **Have complete control over your data.**
+	</Card>
+
+	<Card title="Safe and efficient">
+		Your data is **encrypted and deduplicated**, and stored in the proven and trusted Restic format. So much more efficient than chucking ZIPs around.
+	</Card>
+
+	<Card title="Built for speed">
+		**Sprout is FAST**. Written in Rust, and provided as a single static binary, it will run anywhere.
+	</Card>
+
+	<Card title="Oops factor reduction">
+		Sprout will **locally stash your current database and wp-uploads during destructive operations** - a nice safety net to have!
+	</Card>
+	
+</CardGrid>
+
+
+  
+
+
+
+
+

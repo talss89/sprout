@@ -1,0 +1,176 @@
+---
+title: Command Reference
+description: Sprout command reference
+---
+
+Content and database seeding for WordPress
+
+**Usage:** `sprout [OPTIONS] <COMMAND>`
+
+###### **Subcommands:**
+
+* `init` — Initialise a new project and create a sprout.yaml
+* `repo` — Remote repository commands
+* `snap` — Create a new snapshot
+* `seed` — Seed the database and uploads directory from a snapshot
+* `un-stash` — Restore a locally stashed database and uploads directory
+* `stash` — Manage your stashes
+
+###### **Options:**
+
+* `-p`, `--path <PATH>` — Path to your project
+
+  Default value: `./`
+* `-j`, `--json` — Output JSON on stdout, useful for CI
+
+  Possible values: `true`, `false`
+
+
+
+
+## `sprout init`
+
+Initialise a new project and create a sprout.yaml
+
+**Usage:** `sprout init`
+
+
+
+## `sprout repo`
+
+Remote repository commands
+
+**Usage:** `sprout repo <COMMAND>`
+
+###### **Subcommands:**
+
+* `init` — Initialise a new repository
+* `new` — Create a new repository definition
+* `list` — List all repositories
+* `use` — Set a default respoitory used when creating new projects
+
+
+
+## `sprout repo init`
+
+Initialise a new repository
+
+**Usage:** `sprout repo init [OPTIONS] <LABEL>`
+
+###### **Arguments:**
+
+* `<LABEL>` — Respository URI or path. See the readme for more information on how to connect to S3 or other remote storage providers
+
+###### **Options:**
+
+* `-a`, `--access-key <ACCESS_KEY>` — Set the repository access key
+
+
+
+## `sprout repo new`
+
+Create a new repository definition
+
+**Usage:** `sprout repo new <LABEL>`
+
+###### **Arguments:**
+
+* `<LABEL>` — Respository URI or path. See the readme for more information on how to connect to S3 or other remote storage providers
+
+
+
+## `sprout repo list`
+
+List all repositories
+
+**Usage:** `sprout repo list`
+
+
+
+## `sprout repo use`
+
+Set a default respoitory used when creating new projects
+
+**Usage:** `sprout repo use <LABEL>`
+
+###### **Arguments:**
+
+* `<LABEL>` — Respository URI or path. See the readme for more information on how to connect to S3 or other remote storage providers
+
+
+
+## `sprout snap`
+
+Create a new snapshot
+
+**Usage:** `sprout snap [BRANCH]`
+
+###### **Arguments:**
+
+* `<BRANCH>` — Create a snapshot on a new named content branch
+
+
+
+## `sprout seed`
+
+Seed the database and uploads directory from a snapshot
+
+**Usage:** `sprout seed [OPTIONS]`
+
+###### **Options:**
+
+* `-n`, `--no-stash` — Do not stash
+
+  Possible values: `true`, `false`
+
+
+
+
+## `sprout un-stash`
+
+Restore a locally stashed database and uploads directory
+
+**Usage:** `sprout un-stash [SNAPSHOT_ID]`
+
+###### **Arguments:**
+
+* `<SNAPSHOT_ID>` — Restore a particular stash snapshot by ID. This will not check project or branch constraints - use with caution
+
+
+
+## `sprout stash`
+
+Manage your stashes
+
+**Usage:** `sprout stash [COMMAND]`
+
+###### **Subcommands:**
+
+* `list` — 
+* `drop` — 
+
+
+
+## `sprout stash list`
+
+**Usage:** `sprout stash list`
+
+
+
+## `sprout stash drop`
+
+**Usage:** `sprout stash drop <SNAPSHOT_ID>`
+
+###### **Arguments:**
+
+* `<SNAPSHOT_ID>` — Drop a particular stash snapshot by ID. This will not check project or branch constraints - use with caution
+
+
+
+<hr/>
+
+<small><i>
+    This document was generated automatically by
+    <a href="https://crates.io/crates/clap-markdown"><code>clap-markdown</code></a>.
+</i></small>
+
