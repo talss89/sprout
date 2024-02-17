@@ -2847,6 +2847,7 @@ dependencies = [
  "indicatif",
  "log",
  "passwords",
+ "regex",
  "rustic_backend",
  "rustic_core",
  "serde",

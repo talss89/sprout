@@ -55,6 +55,9 @@ impl RepositoryDefinition {
             ));
         }
 
-        Ok((path.to_owned(), serde_yaml::from_slice(&fs::read(path)?)?))
+        Ok((
+            path.to_owned(),
+            serde_yaml::from_str(&crate::engine::expand_var(&fs::read_to_string(path)?))?,
+        ))
     }
 }
