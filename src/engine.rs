@@ -1,8 +1,11 @@
-use std::{fs, path::PathBuf};
+use std::{borrow::Cow, env, fs, path::PathBuf};
 
 use homedir::get_my_home;
 use log::info;
 use serde::{Deserialize, Serialize};
+
+use regex::Captures;
+use regex::Regex;
 
 #[derive(Serialize, Deserialize)]
 pub struct SproutConfig {
@@ -54,4 +57,13 @@ pub fn write_sprout_config(config: &SproutConfig) -> anyhow::Result<()> {
         get_sprout_home().join("sprout-config.yaml"),
         serde_yaml::to_string(config)?,
     )?)
+}
+
+// (c) Joe_Jingyu - https://stackoverflow.com/questions/62888154/rust-load-environment-variables-into-log4rs-yml-file
+pub fn expand_var(raw_config: &str) -> Cow<str> {
+    let re = Regex::new(r"\$\{([a-zA-Z_][0-9a-zA-Z_]*)\}").unwrap();
+    re.replace_all(&raw_config, |caps: &Captures| match env::var(&caps[1]) {
+        Ok(val) => val,
+        Err(_) => (&caps[0]).to_string(),
+    })
 }
