@@ -412,6 +412,39 @@ fn run() -> anyhow::Result<CliResponse> {
             })
         }
 
+        SubCommand::Ls => {
+            let project = Project::new(options.path.to_owned())?;
+
+            project.print_header();
+
+            info!(
+                "Listing all snapshots for the current project ({})",
+                project.config.name
+            );
+
+            let (_, definition) = RepositoryDefinition::get(&project.config.repo)?;
+
+            let repo = project.open_repo(&definition.access_key)?;
+
+            let (snapshots, errors) = project.get_all_snapshots(&repo)?;
+
+            for err in errors {
+                warn!("{}", err);
+            }
+
+            eprint!("\n{}", crate::cli::snapshot::project_table(&snapshots)?);
+
+            Ok(CliResponse {
+                msg: format!(
+                    "Listed all snapshots for {} on {} - {}",
+                    project.config.name,
+                    project.config.repo,
+                    RepositoryDefinition::display_path(&definition)?
+                ),
+                data: Some(serde_json::to_string(&snapshots)?),
+            })
+        }
+
         SubCommand::UnStash(args) => {
             let project = Project::new(options.path.to_owned())?;
 

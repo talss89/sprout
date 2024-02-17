@@ -331,6 +331,13 @@ impl Project {
         repo.get_latest_snapshot_for_branch(self, &self.config.branch)
     }
 
+    pub fn get_all_snapshots(
+        &self,
+        repo: &ProjectRepository,
+    ) -> anyhow::Result<(Vec<Snapshot>, Vec<anyhow::Error>)> {
+        repo.get_all_snapshots_for_project(self)
+    }
+
     pub fn restore_from_snapshot(
         &self,
         repo: &ProjectRepository,

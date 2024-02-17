@@ -36,6 +36,8 @@ pub enum SubCommand {
     UnStash(UnStashArgs),
     /// Manage your stashes
     Stash(StashArgs),
+    /// List available snapshots
+    Ls,
 }
 
 #[derive(Args, Debug)]
