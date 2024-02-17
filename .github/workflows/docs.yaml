@@ -25,6 +25,8 @@ jobs:
           packages: musl-tools # provides musl-gcc
           version: 1.0  
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          rustflags: ""
       - name: Build clap docs
         run: bash ./docs/build-clap.sh
       - name: Install, build, and upload your site
