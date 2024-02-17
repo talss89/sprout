@@ -8,7 +8,7 @@ use log::{info, warn};
 use passwords::PasswordGenerator;
 use rustic_backend::BackendOptions;
 use rustic_core::{ConfigOptions, Id, KeyOptions, Progress, ProgressBars, RepositoryOptions};
-use std::{io::Write, time::SystemTime};
+use std::{env, io::Write, time::SystemTime};
 use theme::CliTheme;
 
 use crate::{
@@ -30,6 +30,12 @@ mod theme;
 
 include!(concat!(env!("OUT_DIR"), "/built.rs"));
 
+#[cfg(feature = "markdown-docs")]
+fn main() {
+    clap_markdown::print_help_markdown::<Options>();
+}
+
+#[cfg(not(feature = "markdown-docs"))]
 fn main() {
     let now = SystemTime::now();
     let options = Options::parse();
