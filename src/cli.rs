@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand};
 use std::fmt::Debug;
 
+pub mod repo;
 pub mod snapshot;
 
 /// Content and database seeding for WordPress

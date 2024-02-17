@@ -191,49 +191,15 @@ fn run() -> anyhow::Result<CliResponse> {
             }
             RepoCommand::List => {
                 let defs = RepositoryDefinition::list()?;
-                let sprout_config = crate::engine::get_sprout_config()?;
 
                 info!(
                     "Your repository definitions are stored at {}",
                     crate::engine::get_sprout_home().join("repos").display()
                 );
 
-                eprintln!();
-                eprintln!(
-                    "{}",
-                    format!("{:32} | {}", "Repository Label", "Repository URI / Path")
-                        .bold()
-                        .dimmed()
-                );
+                info!("Listing all repository definitions");
 
-                for (label, definition) in &defs {
-                    let repo = definition.repo.clone();
-                    if sprout_config.default_repo == *label {
-                        eprintln!(
-                            "{}",
-                            format!(
-                                "{:32} | {}",
-                                label,
-                                format!(
-                                    "{} {}",
-                                    repo.repository.unwrap_or("".to_string()),
-                                    "<-- Default".to_string().dimmed()
-                                )
-                            )
-                            .bold()
-                            .green()
-                        );
-                    } else {
-                        eprintln!(
-                            "{}",
-                            format!(
-                                "{:32} | {}",
-                                label,
-                                repo.repository.unwrap_or("".to_string())
-                            )
-                        );
-                    }
-                }
+                eprint!("\n{}", crate::cli::repo::definition_table(&defs)?);
 
                 Ok(CliResponse {
                     msg: "Listed all repositories".to_string(),
