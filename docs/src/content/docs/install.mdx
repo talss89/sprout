@@ -8,14 +8,27 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 Sprout is available as a small, single binary on both Mac and Linux. Installation commands are below, or you can [download a release from GitHub](https://github.com/talss89/sprout/releases).
 
 <Tabs>
-  <TabItem label="Mac">
+  <TabItem label="Mac (Intel)">
     ```
-    brew install sprout
+    curl -L "https://github.com/talss89/sprout/releases/latest/download/sprout-macos-x86_64.tar.gz" | tar zxf - && sudo install -c -m 0755 sprout /usr/local/bin
     ```
-</TabItem>
-  <TabItem label="Linux">
-     ```
-     brew install sprout
-     ```
+  </TabItem>
+
+  <TabItem label="Mac (M1)">
+      ```
+      curl -L "https://github.com/talss89/sprout/releases/latest/download/sprout-macos-aarch64.tar.gz" | tar zxf - && sudo install -c -m 0755 sprout /usr/local/bin
+      ```
+  </TabItem>
+
+  <TabItem label="Linux (x86_64)">
+      ```
+      curl -L "https://github.com/talss89/sprout/releases/latest/download/sprout-linux-x86_64.tar.gz" | tar zxf - && sudo install -c -m 0755 sprout /usr/local/bin
+      ```
+  </TabItem>
+
+  <TabItem label="Linux (aarch64)">
+      ```
+      curl -L "https://github.com/talss89/sprout/releases/latest/download/sprout-linux-aarch64.tar.gz" | tar zxf - && sudo install -c -m 0755 sprout /usr/local/bin
+      ```
   </TabItem>
 </Tabs>
