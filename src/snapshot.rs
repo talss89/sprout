@@ -85,4 +85,8 @@ impl Snapshot {
     pub fn get_branch(&self) -> anyhow::Result<String> {
         Self::get_sprout_tag(&self.db_snapshot, "sprt_branch")
     }
+
+    pub fn get_project_name(&self) -> String {
+        self.db_snapshot.hostname.clone()
+    }
 }
