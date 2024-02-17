@@ -1,4 +1,5 @@
 use capturing_glob::glob;
+use colored::*;
 use rustic_backend::BackendOptions;
 use serde::{Deserialize, Serialize};
 use std::{fs, path::PathBuf};
@@ -59,5 +60,36 @@ impl RepositoryDefinition {
             path.to_owned(),
             serde_yaml::from_str(&crate::engine::expand_var(&fs::read_to_string(path)?))?,
         ))
+    }
+
+    pub fn display_path(repo: &RepositoryDefinition) -> anyhow::Result<String> {
+        Ok(match &repo.repo.repository {
+            Some(repository_name) => match repository_name.as_str() {
+                "opendal:s3" => {
+                    format!(
+                        "{} {}",
+                        repository_name,
+                        format!(
+                            "(region: {}, bucket: {}, endpoint: {})",
+                            repo.repo
+                                .options
+                                .get("region")
+                                .unwrap_or(&"???".to_string()),
+                            repo.repo
+                                .options
+                                .get("bucket")
+                                .unwrap_or(&"???".to_string()),
+                            repo.repo
+                                .options
+                                .get("endpoint")
+                                .unwrap_or(&"???".to_string())
+                        )
+                        .dimmed()
+                    )
+                }
+                _ => repository_name.to_owned(),
+            },
+            None => "???".to_string(),
+        })
     }
 }

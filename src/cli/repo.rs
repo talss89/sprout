@@ -11,7 +11,9 @@ pub fn definition_table(defs: &Vec<(String, RepositoryDefinition)>) -> anyhow::R
     write!(
         &mut tw,
         "{}",
-        "Repository Label\tRepository Path\n".dimmed().bold()
+        "Default?\tRepository Label\tRepository Path\n"
+            .dimmed()
+            .bold()
     )?;
 
     for (label, definition) in defs {
@@ -21,22 +23,21 @@ pub fn definition_table(defs: &Vec<(String, RepositoryDefinition)>) -> anyhow::R
                 &mut tw,
                 "{}\n",
                 format!(
-                    "{}\t{}",
+                    "------->\t{}\t{}",
                     label,
-                    format!(
-                        "{} {}",
-                        repo.repository.unwrap_or("".to_string()),
-                        "<-- Default".to_string().dimmed()
-                    )
+                    format!("{}", RepositoryDefinition::display_path(definition)?)
                 )
                 .bold()
-                .green()
             )?;
         } else {
             write!(
                 &mut tw,
                 "{}\n",
-                format!("{}\t{}", label, repo.repository.unwrap_or("".to_string()))
+                format!(
+                    " \t{}\t{}",
+                    label,
+                    repo.repository.unwrap_or("".to_string())
+                )
             )?;
         }
     }
