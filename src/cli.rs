@@ -6,15 +6,15 @@ use std::fmt::Debug;
 pub mod repo;
 pub mod snapshot;
 
-/// Content and database seeding for WordPress
+/// Fast, deduplicated content and database seeding for WordPress.
 #[derive(Parser)]
 #[command(author, about, version)]
 pub struct Options {
-    /// Path to your project
+    /// Optional path to your project. Default: current directory.
     #[arg(short, long, default_value = "./")]
     pub path: PathBuf,
 
-    /// Output JSON on stdout, useful for CI
+    /// Output JSON on stdout - useful for CI or piping into other utilities
     #[arg(short, long)]
     pub json: bool,
 
@@ -28,27 +28,27 @@ pub enum SubCommand {
     Init,
     /// Remote repository commands
     Repo(RepoArgs),
-    /// Create a new snapshot
+    /// Create and push new snapshot to your remote repo
     Snap(SnapArgs),
-    /// Seed the database and uploads directory from a snapshot
+    /// Seed the database and uploads directory from a remote snapshot
     Seed(SeedArgs),
     /// Restore a locally stashed database and uploads directory
     UnStash(UnStashArgs),
-    /// Manage your stashes
+    /// Stash your current database and uploads locally (see subcommands to manage your stashes)
     Stash(StashArgs),
-    /// List available snapshots
+    /// List available remote snapshots
     Ls,
 }
 
 #[derive(Args, Debug)]
 pub struct SnapArgs {
-    /// Create a snapshot on a new named content branch
+    /// Create a snapshot on a specific content branch
     pub branch: Option<String>,
 }
 
 #[derive(Args, Debug)]
 pub struct SeedArgs {
-    /// Do not stash
+    /// Do not stash current database and uploads before seeding
     #[arg(short, long)]
     pub no_stash: bool,
 }
@@ -67,25 +67,31 @@ pub struct StashArgs {
 
 #[derive(Subcommand, Debug)]
 pub enum RepoCommand {
-    /// Initialise a new repository
-    Init(RepoInitArgs),
     /// Create a new repository definition
     New(RepoNewArgs),
-    /// List all repositories
+
+    /// Initialise a brand new repository
+    Init(RepoInitArgs),
+
+    /// List all repository definitions
     List,
-    /// Set a default respoitory used when creating new projects
+
+    /// Set a default repository used when creating new projects
     Use(RepoUseArgs),
 }
 
 #[derive(Subcommand, Debug)]
 pub enum StashCommand {
+    /// List all local stashes for the current project
     List,
+
+    /// Drop a particular stash by snapshot ID
     Drop(StashDropArgs),
 }
 
 #[derive(Args, Debug)]
 pub struct RepoInitArgs {
-    /// Respository URI or path. See the readme for more information on how to connect to S3 or other remote storage providers.
+    /// Repository definition label to initialise. See the readme for more information on how to connect to S3 or other remote storage providers.
     #[arg(index = 1, value_name = "LABEL")]
     pub label: String,
 
@@ -96,14 +102,14 @@ pub struct RepoInitArgs {
 
 #[derive(Args, Debug)]
 pub struct RepoNewArgs {
-    /// Respository URI or path. See the readme for more information on how to connect to S3 or other remote storage providers.
+    /// Your new repository definition label
     #[arg(index = 1, value_name = "LABEL")]
     pub label: String,
 }
 
 #[derive(Args, Debug)]
 pub struct RepoUseArgs {
-    /// Respository URI or path. See the readme for more information on how to connect to S3 or other remote storage providers.
+    /// Your new repository definition label to use as the default
     #[arg(index = 1, value_name = "LABEL")]
     pub label: String,
 }
