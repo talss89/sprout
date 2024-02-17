@@ -89,4 +89,86 @@ impl Snapshot {
     pub fn get_project_name(&self) -> String {
         self.db_snapshot.hostname.clone()
     }
+
+    pub fn get_total_files(&self) -> u64 {
+        if self.db_snapshot.summary.is_none() || self.uploads_snapshot.summary.is_none() {
+            return 0u64;
+        }
+
+        self.db_snapshot
+            .summary
+            .as_ref()
+            .unwrap()
+            .total_files_processed
+            + self
+                .uploads_snapshot
+                .summary
+                .as_ref()
+                .unwrap()
+                .total_files_processed
+    }
+
+    pub fn get_total_bytes(&self) -> u64 {
+        if self.db_snapshot.summary.is_none() || self.uploads_snapshot.summary.is_none() {
+            return 0u64;
+        }
+
+        self.db_snapshot
+            .summary
+            .as_ref()
+            .unwrap()
+            .total_bytes_processed
+            + self
+                .uploads_snapshot
+                .summary
+                .as_ref()
+                .unwrap()
+                .total_bytes_processed
+    }
+
+    pub fn get_data_added(&self) -> u64 {
+        if self.db_snapshot.summary.is_none() || self.uploads_snapshot.summary.is_none() {
+            return 0u64;
+        }
+
+        self.db_snapshot.summary.as_ref().unwrap().data_added
+            + self.uploads_snapshot.summary.as_ref().unwrap().data_added
+    }
+
+    pub fn get_files_new(&self) -> u64 {
+        if self.db_snapshot.summary.is_none() || self.uploads_snapshot.summary.is_none() {
+            return 0u64;
+        }
+
+        self.db_snapshot.summary.as_ref().unwrap().files_new
+            + self.uploads_snapshot.summary.as_ref().unwrap().files_new
+    }
+
+    pub fn get_files_changed(&self) -> u64 {
+        if self.db_snapshot.summary.is_none() || self.uploads_snapshot.summary.is_none() {
+            return 0u64;
+        }
+
+        self.db_snapshot.summary.as_ref().unwrap().files_changed
+            + self
+                .uploads_snapshot
+                .summary
+                .as_ref()
+                .unwrap()
+                .files_changed
+    }
+
+    pub fn get_files_unmodified(&self) -> u64 {
+        if self.db_snapshot.summary.is_none() || self.uploads_snapshot.summary.is_none() {
+            return 0u64;
+        }
+
+        self.db_snapshot.summary.as_ref().unwrap().files_unmodified
+            + self
+                .uploads_snapshot
+                .summary
+                .as_ref()
+                .unwrap()
+                .files_unmodified
+    }
 }

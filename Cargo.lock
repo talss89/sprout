@@ -2854,6 +2854,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "sha2",
+ "tabwriter",
  "tempfile",
 ]
 
@@ -2964,6 +2965,15 @@ checksum = "a75fb188eb626b924683e3b95e3a48e63551fcfb51949de2f06a9d91dbee93c9"
 dependencies = [
  "core-foundation-sys",
  "libc",
+]
+
+[[package]]
+name = "tabwriter"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a327282c4f64f6dc37e3bba4c2b6842cc3a992f204fa58d917696a89f691e5f6"
+dependencies = [
+ "unicode-width",
 ]
 
 [[package]]

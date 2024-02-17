@@ -514,25 +514,12 @@ fn run() -> anyhow::Result<CliResponse> {
                         warn!("{}", err);
                     }
 
-                    eprintln!();
-                    eprintln!(
-                        "{}",
-                        format!("{:64} | {:16} | {}", "ID", "Branch", "Date / Time")
-                            .bold()
-                            .dimmed()
+                    info!(
+                        "Listing all stashes for the {} project",
+                        project.config.name
                     );
 
-                    for stash in &stashes {
-                        eprintln!(
-                            "{}",
-                            format!(
-                                "{:64} | {:16} | {}",
-                                stash.id.to_hex().to_string(),
-                                stash.get_branch().unwrap_or("???".to_string()),
-                                stash.db_snapshot.time
-                            )
-                        );
-                    }
+                    eprint!("\n{}", crate::cli::snapshot::project_table(&stashes)?);
 
                     Ok(CliResponse {
                         msg: format!("Listed all local stashes for {}", project.config.name),
