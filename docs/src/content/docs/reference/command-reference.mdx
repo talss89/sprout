@@ -3,7 +3,7 @@ title: Command Reference
 description: Sprout command reference
 ---
 
-Content and database seeding for WordPress
+Fast, deduplicated content and database seeding for WordPress
 
 **Usage:** `sprout [OPTIONS] <COMMAND>`
 
@@ -11,17 +11,18 @@ Content and database seeding for WordPress
 
 * `init` — Initialise a new project and create a sprout.yaml
 * `repo` — Remote repository commands
-* `snap` — Create a new snapshot
-* `seed` — Seed the database and uploads directory from a snapshot
+* `snap` — Create and push new snapshot to your remote repo
+* `seed` — Seed the database and uploads directory from a remote snapshot
 * `un-stash` — Restore a locally stashed database and uploads directory
-* `stash` — Manage your stashes
+* `stash` — Stash your current database and uploads locally (see subcommands to manage your stashes)
+* `ls` — List available remote snapshots
 
 ###### **Options:**
 
-* `-p`, `--path <PATH>` — Path to your project
+* `-p`, `--path <PATH>` — Optional path to your project. Default: current directory
 
   Default value: `./`
-* `-j`, `--json` — Output JSON on stdout, useful for CI
+* `-j`, `--json` — Output JSON on stdout - useful for CI or piping into other utilities
 
   Possible values: `true`, `false`
 
@@ -44,26 +45,10 @@ Remote repository commands
 
 ###### **Subcommands:**
 
-* `init` — Initialise a new repository
 * `new` — Create a new repository definition
-* `list` — List all repositories
-* `use` — Set a default respoitory used when creating new projects
-
-
-
-## `sprout repo init`
-
-Initialise a new repository
-
-**Usage:** `sprout repo init [OPTIONS] <LABEL>`
-
-###### **Arguments:**
-
-* `<LABEL>` — Respository URI or path. See the readme for more information on how to connect to S3 or other remote storage providers
-
-###### **Options:**
-
-* `-a`, `--access-key <ACCESS_KEY>` — Set the repository access key
+* `init` — Initialise a brand new repository
+* `list` — List all repository definitions
+* `use` — Set a default repository used when creating new projects
 
 
 
@@ -75,13 +60,29 @@ Create a new repository definition
 
 ###### **Arguments:**
 
-* `<LABEL>` — Respository URI or path. See the readme for more information on how to connect to S3 or other remote storage providers
+* `<LABEL>` — Your new repository definition label
+
+
+
+## `sprout repo init`
+
+Initialise a brand new repository
+
+**Usage:** `sprout repo init [OPTIONS] <LABEL>`
+
+###### **Arguments:**
+
+* `<LABEL>` — Repository definition label to initialise. See the readme for more information on how to connect to S3 or other remote storage providers
+
+###### **Options:**
+
+* `-a`, `--access-key <ACCESS_KEY>` — Set the repository access key
 
 
 
 ## `sprout repo list`
 
-List all repositories
+List all repository definitions
 
 **Usage:** `sprout repo list`
 
@@ -89,37 +90,37 @@ List all repositories
 
 ## `sprout repo use`
 
-Set a default respoitory used when creating new projects
+Set a default repository used when creating new projects
 
 **Usage:** `sprout repo use <LABEL>`
 
 ###### **Arguments:**
 
-* `<LABEL>` — Respository URI or path. See the readme for more information on how to connect to S3 or other remote storage providers
+* `<LABEL>` — Your new repository definition label to use as the default
 
 
 
 ## `sprout snap`
 
-Create a new snapshot
+Create and push new snapshot to your remote repo
 
 **Usage:** `sprout snap [BRANCH]`
 
 ###### **Arguments:**
 
-* `<BRANCH>` — Create a snapshot on a new named content branch
+* `<BRANCH>` — Create a snapshot on a specific content branch
 
 
 
 ## `sprout seed`
 
-Seed the database and uploads directory from a snapshot
+Seed the database and uploads directory from a remote snapshot
 
 **Usage:** `sprout seed [OPTIONS]`
 
 ###### **Options:**
 
-* `-n`, `--no-stash` — Do not stash
+* `-n`, `--no-stash` — Do not stash current database and uploads before seeding
 
   Possible values: `true`, `false`
 
@@ -140,18 +141,20 @@ Restore a locally stashed database and uploads directory
 
 ## `sprout stash`
 
-Manage your stashes
+Stash your current database and uploads locally (see subcommands to manage your stashes)
 
 **Usage:** `sprout stash [COMMAND]`
 
 ###### **Subcommands:**
 
-* `list` — 
-* `drop` — 
+* `list` — List all local stashes for the current project
+* `drop` — Drop a particular stash by snapshot ID
 
 
 
 ## `sprout stash list`
+
+List all local stashes for the current project
 
 **Usage:** `sprout stash list`
 
@@ -159,11 +162,21 @@ Manage your stashes
 
 ## `sprout stash drop`
 
+Drop a particular stash by snapshot ID
+
 **Usage:** `sprout stash drop <SNAPSHOT_ID>`
 
 ###### **Arguments:**
 
 * `<SNAPSHOT_ID>` — Drop a particular stash snapshot by ID. This will not check project or branch constraints - use with caution
+
+
+
+## `sprout ls`
+
+List available remote snapshots
+
+**Usage:** `sprout ls`
 
 
 

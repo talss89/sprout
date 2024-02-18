@@ -5,25 +5,103 @@ description: Creating an S3 backed Sprout repo
 
 *To really make Sprout work for your team, you'll probably want to store your content somewhere central. Amazon S3 (or other S3 compatible services) can be a great choice. Let's set up a new repo on S3!*
 
-## 0. Prerequisites
-
-You'll need a few things:
-
+:::tip[You will need...]
 - An S3, or S3 compatible bucket with read / write access
 - Your access key and secret for the bucket
+:::
 
 ## 1. Create the repo definition
 
-Let's create a new repo definition. We will need to label it. 
+Let's create a new repo definition. Let's call it something unique, like `my-s3-repo`...
 
+```bash
+sprout repo new my-s3-repo
 ```
-sprout repo init my-teams-s3-repo
+
+Sprout will now fire up an editor, allowing you to modify the repo definition. As we're going to use S3, we need to use `opendal:s3` as our `repository`, and set some other options:
+
+```diff lang="yaml" title="~/.sprout/repos/my-s3-repo.yaml" {2, 5-10}
+access_key: ''
+repository: opendal:s3
+repo-hot: null
+-options: {}
++options:
++  access_key_id: <YOUR S3 ACCESS KEY>
++  endpoint: <YOUR S3 ENDPOINT>
++  region: <YOUR S3 REGION>
++  secret_access_key: <YOUR S3 SECRET>
++  bucket: <YOUR S3 BUCKET NAME>
+options-hot: {}
+options-cold: {}
 ```
 
-## 2. Set up the S3 connection
+:::tip
+For a list of `options` for S3, see the [OpenDAL documentation page for the S3 service](https://opendal.apache.org/docs/services/s3#configuration).
+:::
 
-## 3. Initialise the repo
+Make sure to save and exit the editor when you're done.
 
-## 4. Test!
+## 2. Initialise the repo
 
-## 5. Sharing your repo definition
+Now initialise the repo by running:
+
+```bash
+sprout repo init my-s3-repo
+```
+
+Let Sprout create and set a repo access key for you. This is your encryption key for your repo, **not your S3 access key**. They should be unique. *We have a plan to change the terminology here, as it does get confusing!*
+
+If all goes well, you should see success.
+
+## 3. Test!
+
+Now everything is set up, let's push a snapshot.
+
+Switch to an existing Sprout project (or initialise a new one with `sprout init`), then edit the `sprout.yaml` file to point to our new repo definition.
+
+**It's also a good idea to clear the `snapshot` ID field too when changing repo:**
+
+```diff lang="yaml" title="~/projects/my-existing-project/sprout.yaml" {3,5}
+name: my-existing-project
+branch: main
+snapshot: ''
+uploads_path: public/content/uploads
+repo: my-s3-repo
+```
+
+Now we are ready to snapshot. Let's run:
+
+```bash
+sprout snap
+```
+
+The initial snapshot should complete - it may take a little while. There is no parent present, so the first snapshot will need to upload all of your content. Subsequent snapshots will be faster.
+
+Let's check and see if we can see the snapshot in our repo. List the snapshots by running:
+
+```bash
+sprout ls
+```
+
+You should see your new snapshot! That's all there is to it.
+
+## 4. Sharing your repo definition
+
+When using a remote storage backend for a repo, we often want to share our repo definitions with the rest of our team. All your repo definitions exist at `~/.sprout/repos`.
+
+It's not a good idea to send our S3 access keys and secrets around as part of the definition, so you should replace any sensitive keys with an environment variable. For example:
+
+```yaml title="~/.sprout/repos/linode.yaml" {5,8}
+access_key: Kheq43pnuJGdidIY0uItHinKIIl34kedImyIs3cr3tsL5l4hCBketjqcjN
+repository: opendal:s3
+repo-hot: null
+options:
+  access_key_id: ${S3_ACCESS_KEY}
+  endpoint: https://s3.amazonaws.com
+  region: eu-west-1
+  secret_access_key: ${S3_SECRET}
+  bucket: sprout-test
+options-hot: {}
+options-cold: {}
+```
+

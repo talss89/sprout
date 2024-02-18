@@ -1,4 +1,36 @@
 ---
 title: Repository Definition
-description: Sprout command reference
+description: Sprout repository definition reference
 ---
+
+:::note[I've been busy, but not that busy!]
+This section is still being worked on.
+:::
+
+This page will document the structure of a repository definition. Here's an example definition:
+
+```yaml title="~/.sprout/repos/local-repo.yaml"
+access_key: Kheq43pnuJGdidIY0uItHinKIIl34kedImyIs3cr3tsL5l4hCBketjqcjN
+repository: /tmp/local-repo
+repo-hot: null
+options: {}
+options-hot: {}
+options-cold: {}
+```
+
+***[and another](https://www.youtube.com/watch?v=Xhlx43rTs2Q)***
+
+```yaml title="~/.sprout/repos/linode.yaml"
+access_key: Kheq43pnuJGdidIY0uItHinKIIl34kedImyIs3cr3tsL5l4hCBketjqcjN
+repository: opendal:s3
+repo-hot: null
+options:
+  access_key_id: ${LINODE_ACCESS_KEY}
+  endpoint: https://nl-ams-1.linodeobjects.com
+  root: /sprouty-buckets
+  enable_virtual_host_style: 'true'
+  secret_access_key: ${LINODE_SECRET}
+  bucket: sprout-test
+options-hot: {}
+options-cold: {}
+```
