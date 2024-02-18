@@ -14,7 +14,11 @@ pub struct SproutConfig {
 }
 
 pub fn get_sprout_home() -> PathBuf {
-    get_my_home().unwrap().unwrap().as_path().join(".sprout")
+    if env::var("SPROUT_HOME").is_err() {
+        get_my_home().unwrap().unwrap().as_path().join(".sprout")
+    } else {
+        PathBuf::from(env::var("SPROUT_HOME").unwrap())
+    }
 }
 
 pub fn ensure_sprout_home() -> anyhow::Result<()> {
