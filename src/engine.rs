@@ -14,12 +14,12 @@ pub struct SproutConfig {
 
 #[derive(Debug, Clone)]
 pub struct Engine {
-    pub home_path: PathBuf,
+    pub sprout_home: PathBuf,
 }
 
 impl Engine {
     pub fn get_home(&self) -> PathBuf {
-        self.home_path.clone()
+        self.sprout_home.clone()
     }
 
     pub fn ensure_home(&self) -> anyhow::Result<()> {
