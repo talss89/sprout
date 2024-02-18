@@ -10,13 +10,13 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  test:
 
     runs-on: macos-latest
 
     steps:
     - uses: actions/checkout@v3
     - name: Build
-      run: cargo build --verbose
+      run: cargo build
     - name: Run tests
       run: cargo test --verbose
