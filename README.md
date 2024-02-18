@@ -21,7 +21,7 @@
 
 ---
 
-[![asciicast](https://asciinema.org/a/636443.svg)](https://asciinema.org/a/636443)
+[![asciicast](https://asciinema.org/a/641208.svg)](https://asciinema.org/a/641208)
 
 ## Installation
 
