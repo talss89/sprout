@@ -13,6 +13,7 @@ pub type TestResult = Result<()>;
 #[derive(Debug)]
 pub struct TestContext {
     pub sprout_home: TempDir,
+    pub project_path: TempDir,
     pub repo_path: TempDir,
     pub engine: Engine,
 }
@@ -20,6 +21,7 @@ pub struct TestContext {
 impl TestContext {
     pub fn new() -> Result<Self> {
         let sprout_home = TempDir::new()?;
+        let project_path = TempDir::new()?;
         let repo_path = TempDir::new()?;
 
         Ok(Self {
@@ -27,6 +29,7 @@ impl TestContext {
                 sprout_home: sprout_home.path().to_path_buf(),
             },
             sprout_home,
+            project_path,
             repo_path,
         })
     }
