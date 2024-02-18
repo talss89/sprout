@@ -18,19 +18,23 @@ export default defineConfig({
 		sidebar: [
 			{
 				label: 'Installation',
-				link: '/install'
+				link: 'install'
 			},
 			{
 				label: 'Using Sprout',
-				link: '/using-sprout'
+				link: 'using-sprout'
+			},
+			{
+				label: 'A Quick Tour',
+				link: 'quick-tour'
 			},
 			{
 				label: 'Guides',
 				items: [
-					// Each item here is one entry in the navigation menu.
+
 					{
 						label: 'Creating a repo on S3',
-						link: '/guides/creating-a-repo-on-s3/'
+						link: 'guides/creating-a-repo-on-s3/'
 					}]
 			}, {
 				label: 'Reference',

@@ -2,3 +2,41 @@
 title: Using Sprout
 description: How to use Sprout, and what it's for
 ---
+
+**Sprout solves the problem of sharing WordPress content and databases between developers.** 
+
+With Sprout, you can take **snapshots** of your **project**'s WordPress content and database, upload them to a  **repository**, and let your team easily **seed** a new environment from your **snapshot**.
+
+Getting the most out of Sprout is simple, but first, let's look at how it works...
+
+## What is a Snapshot?
+
+A snapshot is a copy of your WordPress uploads content and database at any point in time. With Sprout, we can easily create new snapshots, store them in a **repository**, and then **seed** a new environment using a stored snapshot.
+
+Snapshots are deduplicated, so creating a new one only stores the changes since your last snapshot - nice and efficient. They're also encrypted too. 
+
+## What is a Repository?
+
+A Sprout repository, or "*repo*", is the location where Sprout will store your content for your WordPress projects. It can be a simple local folder (for testing purposes), or hosted elsewhere.
+
+You can store multiple **projects** in a single repo.
+
+Sprout keeps a list of "*repository definitions*" on your local machine, which tell Sprout exactly how to connect to a repo. You can share these definitions with others in your team to allow them to connect too.
+
+:::tip[Nice to know!]
+Sprout can connect to a huge number of repo storage backends, such as S3, OneDrive, SFTP, Dropbox, Google Drive, WebDAV and more!
+:::
+
+## What is a Project?
+
+A project is a WordPress installation containing a `sprout.yaml` file.
+
+The `sprout.yaml` file describes exactly which version of database uploads content to use when **seeding** a new environment.
+
+You should always commit your `sprout.yaml` file to version control.
+
+## What is Seeding?
+
+Seeding is the process of restoring your WordPress uploads and database from a **snapshot**. 
+
+If you've cloned a **project** with a `sprout.yaml` file, and you have the **repository** set up, all you need to do is run `sprout seed`.
