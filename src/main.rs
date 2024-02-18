@@ -15,7 +15,5 @@ fn main() {
         Ok(home) => PathBuf::from(home),
     };
 
-    sprout::cli::entrypoint(&Engine {
-        home_path: sprout_home,
-    })
+    sprout::cli::entrypoint(&Engine { sprout_home })
 }
