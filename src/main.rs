@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 #[cfg(feature = "markdown-docs")]
 fn main() {
-    clap_markdown::print_help_markdown::<Options>();
+    clap_markdown::print_help_markdown::<sprout::cli::clap::Options>();
 }
 
 #[cfg(not(feature = "markdown-docs"))]
