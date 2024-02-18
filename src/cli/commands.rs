@@ -322,7 +322,7 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
 
             if !args.no_stash {
                 warn!("This command is destructive. Stashing your database and uploads locally.");
-                let stash = Stash::new(engine, sprout_home.join("stash"))?;
+                let stash = Stash::new(engine, engine.get_stash_path())?;
                 stash.stash(&project)?;
             } else {
                 let confirmation = Confirm::with_theme(&CliTheme::default())
@@ -404,7 +404,7 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
                 });
             }
 
-            let stash = Stash::new(engine, sprout_home.join("stash"))?;
+            let stash = Stash::new(engine, engine.get_stash_path())?;
 
             let snap_id = match args.snapshot_id {
                 Some(id) => Id::from_hex(&id)?,
@@ -431,7 +431,7 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
 
                 project.determine_home_url()?;
 
-                let stash = Stash::new(engine, sprout_home.join("stash"))?;
+                let stash = Stash::new(engine, engine.get_stash_path())?;
                 stash.stash(&project)?;
 
                 Ok(CliResponse {
@@ -445,7 +445,7 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
 
                     project.print_header();
 
-                    let stash = Stash::new(engine, sprout_home.join("stash"))?;
+                    let stash = Stash::new(engine, engine.get_stash_path())?;
 
                     let (stashes, errors) = stash.get_all_stashes_for_project(&project)?;
 
@@ -466,7 +466,7 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
                     })
                 }
                 StashCommand::Drop(args) => {
-                    let stash = Stash::new(engine, sprout_home.join("stash"))?;
+                    let stash = Stash::new(engine, engine.get_stash_path())?;
 
                     let snapshot = stash.get_stash_by_id(Id::from_hex(&args.snapshot_id)?)?;
 

@@ -22,6 +22,10 @@ impl Engine {
         self.sprout_home.clone()
     }
 
+    pub fn get_stash_path(&self) -> PathBuf {
+        self.sprout_home.clone().join("stash")
+    }
+
     pub fn ensure_home(&self) -> anyhow::Result<()> {
         let sprout_home = self.get_home();
 

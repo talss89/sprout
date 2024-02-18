@@ -45,7 +45,7 @@ impl Stash {
 
         let passkey = pg.generate_one().unwrap();
 
-        let backend = BackendOptions::default().repository(path.join("stash").to_string_lossy());
+        let backend = BackendOptions::default().repository(path.to_string_lossy());
         let repo_opts = RepositoryOptions::default().password(&passkey);
 
         let key_opts = KeyOptions::default();
@@ -64,8 +64,7 @@ impl Stash {
 
     fn open_stash(&self, project: &Project) -> anyhow::Result<ProjectRepository> {
         let sprout_config = self.engine.get_config()?;
-        let backend =
-            BackendOptions::default().repository(self.path.join("stash").to_string_lossy());
+        let backend = BackendOptions::default().repository(self.path.to_string_lossy());
         let repo_opts = RepositoryOptions::default().password(sprout_config.stash_key);
 
         ProjectRepository::new(project, backend, repo_opts)
@@ -73,8 +72,7 @@ impl Stash {
 
     fn direct_open_stash(&self) -> anyhow::Result<RusticRepo<()>> {
         let sprout_config = self.engine.get_config()?;
-        let backend =
-            BackendOptions::default().repository(self.path.join("stash").to_string_lossy());
+        let backend = BackendOptions::default().repository(self.path.to_string_lossy());
         let repo_opts = RepositoryOptions::default().password(sprout_config.stash_key);
 
         RusticRepo::<()>::open_repo(backend, repo_opts)
