@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use tempfile::tempdir;
 
 use crate::{
-    engine::get_sprout_config,
+    engine::Engine,
     facts::ProjectFactProvider,
     progress::SproutProgressBar,
     repo::{definition::RepositoryDefinition, ProjectRepository},
@@ -31,6 +31,8 @@ pub struct Project {
     pub home_url: String,
     #[serde(skip)]
     facts: Box<dyn ProjectFactProvider>,
+    #[serde(skip)]
+    engine: Engine,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -43,7 +45,11 @@ pub struct ProjectConfig {
 }
 
 impl Project {
-    pub fn new(path: PathBuf, facts: Box<dyn ProjectFactProvider>) -> anyhow::Result<Self> {
+    pub fn new(
+        engine: &Engine,
+        path: PathBuf,
+        facts: Box<dyn ProjectFactProvider>,
+    ) -> anyhow::Result<Self> {
         let config = Self::load_project_config(&path.join("./sprout.yaml"))?;
 
         Ok(Self {
@@ -52,10 +58,15 @@ impl Project {
             home_url: format!("https://{}.test", &config.name),
             config,
             facts,
+            engine: engine.clone(),
         })
     }
 
-    pub fn initialise(path: PathBuf, facts: Box<dyn ProjectFactProvider>) -> anyhow::Result<Self> {
+    pub fn initialise(
+        engine: &Engine,
+        path: PathBuf,
+        facts: Box<dyn ProjectFactProvider>,
+    ) -> anyhow::Result<Self> {
         if path.join("./sprout.yaml").exists() {
             return Err(anyhow::anyhow!("A sprout.yaml already exists!"));
         }
@@ -63,7 +74,7 @@ impl Project {
         let path = fs::canonicalize(path).unwrap();
 
         let mut uploads_path = PathBuf::from("./wp-content/uploads");
-        let sprout_config = get_sprout_config()?;
+        let sprout_config = engine.get_config()?;
 
         if let Ok(installed) = facts.is_wordpress_installed() {
             if installed {
@@ -85,7 +96,7 @@ impl Project {
 
         fs::write(path.join("./sprout.yaml"), serde_yaml::to_string(&config)?)?;
 
-        Project::new(path, facts)
+        Project::new(engine, path, facts)
     }
 
     pub fn load_project_config(path: &PathBuf) -> anyhow::Result<ProjectConfig> {
@@ -162,7 +173,7 @@ impl Project {
 
     pub fn open_repo(&self, access_key: &str) -> anyhow::Result<ProjectRepository> {
         let repo_opts = RepositoryOptions::default().password(access_key);
-        let (_, definition) = RepositoryDefinition::get(self.config.repo.as_str())?;
+        let (_, definition) = RepositoryDefinition::get(&self.engine, self.config.repo.as_str())?;
         let repo = ProjectRepository::new(self, definition.repo, repo_opts)?;
 
         Ok(repo)
@@ -262,7 +273,7 @@ impl Project {
             format!(
                 "{} {}",
                 self.config.repo.dimmed().italic(),
-                match RepositoryDefinition::get(&self.config.repo) {
+                match RepositoryDefinition::get(&self.engine, &self.config.repo) {
                     Err(_) => "UNKNOWN".to_string().red(),
                     Ok((_, definition)) => match definition.repo.repository {
                         None => "INVALID".to_string().red(),
