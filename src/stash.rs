@@ -14,20 +14,24 @@ use crate::{
 
 pub struct Stash {
     pub path: PathBuf,
+    engine: Engine,
 }
 
 impl Stash {
-    pub fn new(path: PathBuf) -> anyhow::Result<Self> {
+    pub fn new(engine: &Engine, path: PathBuf) -> anyhow::Result<Self> {
         if !path.exists() {
             warn!("Stash does not exist at {}.", path.to_string_lossy());
 
-            Stash::initialise(path.to_owned())?;
+            Stash::initialise(engine, path.to_owned())?;
         }
 
-        Ok(Self { path })
+        Ok(Self {
+            path,
+            engine: engine.clone(),
+        })
     }
 
-    pub fn initialise(path: PathBuf) -> anyhow::Result<()> {
+    pub fn initialise(engine: &Engine, path: PathBuf) -> anyhow::Result<()> {
         info!("Initialising new stash at {}", path.to_string_lossy());
 
         let pg = PasswordGenerator::new()
@@ -49,17 +53,17 @@ impl Stash {
 
         let _repo = ProjectRepository::initialise(backend, repo_opts, key_opts, config_opts);
 
-        let mut sprout_config = get_sprout_config()?;
+        let mut sprout_config = engine.get_config()?;
 
         sprout_config.stash_key = passkey;
 
-        write_sprout_config(&sprout_config)?;
+        engine.write_config(&sprout_config)?;
 
         Ok(())
     }
 
     fn open_stash(&self, project: &Project) -> anyhow::Result<ProjectRepository> {
-        let sprout_config = get_sprout_config()?;
+        let sprout_config = self.engine.get_config()?;
         let backend =
             BackendOptions::default().repository(self.path.join("stash").to_string_lossy());
         let repo_opts = RepositoryOptions::default().password(sprout_config.stash_key);
@@ -68,7 +72,7 @@ impl Stash {
     }
 
     fn direct_open_stash(&self) -> anyhow::Result<RusticRepo<()>> {
-        let sprout_config = get_sprout_config()?;
+        let sprout_config = self.engine.get_config()?;
         let backend =
             BackendOptions::default().repository(self.path.join("stash").to_string_lossy());
         let repo_opts = RepositoryOptions::default().password(sprout_config.stash_key);

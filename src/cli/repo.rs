@@ -2,10 +2,13 @@ use colored::*;
 use std::io::Write;
 use tabwriter::TabWriter;
 
-use crate::repo::definition::RepositoryDefinition;
+use crate::{engine::Engine, repo::definition::RepositoryDefinition};
 
-pub fn definition_table(defs: &Vec<(String, RepositoryDefinition)>) -> anyhow::Result<String> {
-    let sprout_config = crate::engine::get_sprout_config()?;
+pub fn definition_table(
+    engine: &Engine,
+    defs: &Vec<(String, RepositoryDefinition)>,
+) -> anyhow::Result<String> {
+    let sprout_config = engine.get_config()?;
     let mut tw = TabWriter::new(vec![]).ansi(true);
 
     write!(

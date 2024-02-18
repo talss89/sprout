@@ -4,6 +4,8 @@ use rustic_backend::BackendOptions;
 use serde::{Deserialize, Serialize};
 use std::{fs, path::PathBuf};
 
+use crate::engine::Engine;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RepositoryDefinition {
     pub access_key: String,
@@ -28,25 +30,25 @@ impl RepositoryDefinition {
         Ok(())
     }
 
-    pub fn list() -> anyhow::Result<Vec<(String, RepositoryDefinition)>> {
+    pub fn list(engine: &Engine) -> anyhow::Result<Vec<(String, RepositoryDefinition)>> {
         let mut results = vec![];
 
         for entry in glob(&format!(
             "{}/repos/(*).yaml",
-            crate::engine::get_sprout_home().to_string_lossy()
+            engine.get_home().to_string_lossy()
         ))
         .expect("Failed to read glob pattern")
         .flatten()
         {
             let label = entry.group(1).unwrap().to_str().unwrap();
-            results.push((String::from(label), Self::get(label)?.1));
+            results.push((String::from(label), Self::get(engine, label)?.1));
         }
 
         Ok(results)
     }
 
-    pub fn get(label: &str) -> anyhow::Result<(PathBuf, RepositoryDefinition)> {
-        let path = crate::engine::get_sprout_home().join(format!("repos/{}.yaml", label));
+    pub fn get(engine: &Engine, label: &str) -> anyhow::Result<(PathBuf, RepositoryDefinition)> {
+        let path = engine.get_home().join(format!("repos/{}.yaml", label));
 
         if !path.exists() {
             return Err(anyhow::anyhow!(

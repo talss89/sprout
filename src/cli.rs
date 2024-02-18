@@ -3,18 +3,18 @@ use colored::*;
 
 use std::time::SystemTime;
 
-use crate::cli::clap::Options;
+use crate::{cli::clap::Options, engine::Engine};
 
 pub mod clap;
 mod commands;
 mod repo;
 mod snapshot;
 
-pub fn entrypoint() {
+pub fn entrypoint(engine: &Engine) {
     let now = SystemTime::now();
     let options = Options::parse();
 
-    match commands::run() {
+    match commands::run(engine) {
         Ok(response) => {
             let elapsed = now.elapsed().unwrap();
             eprintln!();

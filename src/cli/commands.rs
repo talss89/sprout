@@ -11,6 +11,7 @@ use std::io::Write;
 
 use crate::{
     cli::clap::{CliResponse, Options, RepoCommand, StashCommand, SubCommand},
+    engine::Engine,
     facts::wordpress::WordPress,
     progress::SproutProgressBar,
     project::Project,
@@ -20,7 +21,7 @@ use crate::{
 };
 
 #[allow(clippy::format_in_format_args)]
-pub fn run() -> anyhow::Result<CliResponse> {
+pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
     let options = Options::parse();
 
     let logo = format!(
@@ -86,8 +87,8 @@ pub fn run() -> anyhow::Result<CliResponse> {
         })
         .init();
 
-    let sprout_home = crate::engine::get_sprout_home();
-    crate::engine::ensure_sprout_home()?;
+    let sprout_home = engine.get_home();
+    engine.ensure_home()?;
 
     std::env::set_current_dir(&options.path)?;
 
@@ -98,7 +99,7 @@ pub fn run() -> anyhow::Result<CliResponse> {
     match options.subcommand {
         SubCommand::Init => {
             info!("Creating a `sprout.yaml` for your project and opening it in the default text editor...");
-            let project = Project::initialise(options.path.to_owned(), facts)?;
+            let project = Project::initialise(engine, options.path.to_owned(), facts)?;
 
             edit::edit_file(options.path.join("./sprout.yaml"))?;
 
@@ -114,13 +115,13 @@ pub fn run() -> anyhow::Result<CliResponse> {
             RepoCommand::Use(args) => {
                 info!("Setting default repo to {}", &args.label);
 
-                let mut sprout_config = crate::engine::get_sprout_config()?;
+                let mut sprout_config = engine.get_config()?;
 
-                let (_, definition) = RepositoryDefinition::get(&args.label)?;
+                let (_, definition) = RepositoryDefinition::get(engine, &args.label)?;
 
                 sprout_config.default_repo = args.label.to_owned();
 
-                crate::engine::write_sprout_config(&sprout_config)?;
+                engine.write_config(&sprout_config)?;
 
                 Ok(CliResponse {
                     msg: format!("Set default repo to {}", args.label),
@@ -128,16 +129,16 @@ pub fn run() -> anyhow::Result<CliResponse> {
                 })
             }
             RepoCommand::List => {
-                let defs = RepositoryDefinition::list()?;
+                let defs = RepositoryDefinition::list(engine)?;
 
                 info!(
                     "Your repository definitions are stored at {}",
-                    crate::engine::get_sprout_home().join("repos").display()
+                    engine.get_home().join("repos").display()
                 );
 
                 info!("Listing all repository definitions");
 
-                eprint!("\n{}", crate::cli::repo::definition_table(&defs)?);
+                eprint!("\n{}", crate::cli::repo::definition_table(engine, &defs)?);
 
                 Ok(CliResponse {
                     msg: "Listed all repositories".to_string(),
@@ -160,14 +161,14 @@ pub fn run() -> anyhow::Result<CliResponse> {
 
                 edit::edit_file(&repo_file)?;
 
-                let mut sprout_config = crate::engine::get_sprout_config()?;
+                let mut sprout_config = engine.get_config()?;
 
                 if sprout_config.default_repo.is_empty() {
                     info!("Setting default repo to {}", &args.label);
 
                     sprout_config.default_repo = args.label.to_owned();
 
-                    crate::engine::write_sprout_config(&sprout_config)?;
+                    engine.write_config(&sprout_config)?;
                 } else {
                     info!(
                         "Your default repo ({}) is unchanged.",
@@ -199,7 +200,8 @@ pub fn run() -> anyhow::Result<CliResponse> {
 
                 let generated_access_key = pg.generate_one().unwrap();
 
-                let (definition_path, mut definition) = RepositoryDefinition::get(&args.label)?;
+                let (definition_path, mut definition) =
+                    RepositoryDefinition::get(engine, &args.label)?;
 
                 let access_key = match args.access_key {
                     Some(access_key) => access_key,
@@ -245,13 +247,13 @@ pub fn run() -> anyhow::Result<CliResponse> {
         },
 
         SubCommand::Snap(args) => {
-            let mut project = Project::new(options.path.to_owned(), facts)?;
+            let mut project = Project::new(engine, options.path.to_owned(), facts)?;
 
             project.print_header();
 
             project.determine_home_url()?;
 
-            let (_, definition) = RepositoryDefinition::get(&project.config.repo)?;
+            let (_, definition) = RepositoryDefinition::get(engine, &project.config.repo)?;
 
             let repo = project.open_repo(&definition.access_key)?;
 
@@ -310,17 +312,17 @@ pub fn run() -> anyhow::Result<CliResponse> {
         }
 
         SubCommand::Seed(args) => {
-            let mut project = Project::new(options.path.to_owned(), facts)?;
+            let mut project = Project::new(engine, options.path.to_owned(), facts)?;
 
             project.print_header();
 
             project.determine_home_url()?;
 
-            let (_, definition) = RepositoryDefinition::get(&project.config.repo)?;
+            let (_, definition) = RepositoryDefinition::get(engine, &project.config.repo)?;
 
             if !args.no_stash {
                 warn!("This command is destructive. Stashing your database and uploads locally.");
-                let stash = Stash::new(sprout_home.join("stash"))?;
+                let stash = Stash::new(engine, sprout_home.join("stash"))?;
                 stash.stash(&project)?;
             } else {
                 let confirmation = Confirm::with_theme(&CliTheme::default())
@@ -351,7 +353,7 @@ pub fn run() -> anyhow::Result<CliResponse> {
         }
 
         SubCommand::Ls => {
-            let project = Project::new(options.path.to_owned(), facts)?;
+            let project = Project::new(engine, options.path.to_owned(), facts)?;
 
             project.print_header();
 
@@ -360,7 +362,7 @@ pub fn run() -> anyhow::Result<CliResponse> {
                 project.config.name
             );
 
-            let (_, definition) = RepositoryDefinition::get(&project.config.repo)?;
+            let (_, definition) = RepositoryDefinition::get(engine, &project.config.repo)?;
 
             let repo = project.open_repo(&definition.access_key)?;
 
@@ -384,7 +386,7 @@ pub fn run() -> anyhow::Result<CliResponse> {
         }
 
         SubCommand::UnStash(args) => {
-            let project = Project::new(options.path.to_owned(), facts)?;
+            let project = Project::new(engine, options.path.to_owned(), facts)?;
 
             project.print_header();
 
@@ -402,7 +404,7 @@ pub fn run() -> anyhow::Result<CliResponse> {
                 });
             }
 
-            let stash = Stash::new(sprout_home.join("stash"))?;
+            let stash = Stash::new(engine, sprout_home.join("stash"))?;
 
             let snap_id = match args.snapshot_id {
                 Some(id) => Id::from_hex(&id)?,
@@ -423,13 +425,13 @@ pub fn run() -> anyhow::Result<CliResponse> {
 
         SubCommand::Stash(args) => match args.subcommand {
             None => {
-                let mut project = Project::new(options.path.to_owned(), facts)?;
+                let mut project = Project::new(engine, options.path.to_owned(), facts)?;
 
                 project.print_header();
 
                 project.determine_home_url()?;
 
-                let stash = Stash::new(sprout_home.join("stash"))?;
+                let stash = Stash::new(engine, sprout_home.join("stash"))?;
                 stash.stash(&project)?;
 
                 Ok(CliResponse {
@@ -439,11 +441,11 @@ pub fn run() -> anyhow::Result<CliResponse> {
             }
             Some(subcommand) => match subcommand {
                 StashCommand::List => {
-                    let project = Project::new(options.path.to_owned(), facts)?;
+                    let project = Project::new(engine, options.path.to_owned(), facts)?;
 
                     project.print_header();
 
-                    let stash = Stash::new(sprout_home.join("stash"))?;
+                    let stash = Stash::new(engine, sprout_home.join("stash"))?;
 
                     let (stashes, errors) = stash.get_all_stashes_for_project(&project)?;
 
@@ -464,7 +466,7 @@ pub fn run() -> anyhow::Result<CliResponse> {
                     })
                 }
                 StashCommand::Drop(args) => {
-                    let stash = Stash::new(sprout_home.join("stash"))?;
+                    let stash = Stash::new(engine, sprout_home.join("stash"))?;
 
                     let snapshot = stash.get_stash_by_id(Id::from_hex(&args.snapshot_id)?)?;
 
