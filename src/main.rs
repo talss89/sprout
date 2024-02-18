@@ -13,6 +13,7 @@ use theme::CliTheme;
 
 use crate::{
     cli::{Options, RepoCommand, StashCommand, SubCommand},
+    facts::wordpress::WordPress,
     progress::SproutProgressBar,
     project::Project,
     repo::{definition::RepositoryDefinition, ProjectRepository},
@@ -21,6 +22,7 @@ use crate::{
 
 mod cli;
 mod engine;
+mod facts;
 mod progress;
 mod project;
 mod repo;
@@ -157,10 +159,14 @@ fn run() -> anyhow::Result<CliResponse> {
 
     std::env::set_current_dir(&options.path)?;
 
+    let facts = Box::new(WordPress {
+        path: options.path.to_owned(),
+    });
+
     match options.subcommand {
         SubCommand::Init => {
             info!("Creating a `sprout.yaml` for your project and opening it in the default text editor...");
-            let project = Project::initialise(options.path.to_owned())?;
+            let project = Project::initialise(options.path.to_owned(), facts)?;
 
             edit::edit_file(options.path.join("./sprout.yaml"))?;
 
@@ -307,7 +313,7 @@ fn run() -> anyhow::Result<CliResponse> {
         },
 
         SubCommand::Snap(args) => {
-            let mut project = Project::new(options.path.to_owned())?;
+            let mut project = Project::new(options.path.to_owned(), facts)?;
 
             project.print_header();
 
@@ -372,7 +378,7 @@ fn run() -> anyhow::Result<CliResponse> {
         }
 
         SubCommand::Seed(args) => {
-            let mut project = Project::new(options.path.to_owned())?;
+            let mut project = Project::new(options.path.to_owned(), facts)?;
 
             project.print_header();
 
@@ -413,7 +419,7 @@ fn run() -> anyhow::Result<CliResponse> {
         }
 
         SubCommand::Ls => {
-            let project = Project::new(options.path.to_owned())?;
+            let project = Project::new(options.path.to_owned(), facts)?;
 
             project.print_header();
 
@@ -446,7 +452,7 @@ fn run() -> anyhow::Result<CliResponse> {
         }
 
         SubCommand::UnStash(args) => {
-            let project = Project::new(options.path.to_owned())?;
+            let project = Project::new(options.path.to_owned(), facts)?;
 
             project.print_header();
 
@@ -485,7 +491,7 @@ fn run() -> anyhow::Result<CliResponse> {
 
         SubCommand::Stash(args) => match args.subcommand {
             None => {
-                let mut project = Project::new(options.path.to_owned())?;
+                let mut project = Project::new(options.path.to_owned(), facts)?;
 
                 project.print_header();
 
@@ -501,7 +507,7 @@ fn run() -> anyhow::Result<CliResponse> {
             }
             Some(subcommand) => match subcommand {
                 StashCommand::List => {
-                    let project = Project::new(options.path.to_owned())?;
+                    let project = Project::new(options.path.to_owned(), facts)?;
 
                     project.print_header();
 

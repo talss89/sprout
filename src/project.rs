@@ -1,7 +1,6 @@
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::{Command, Stdio},
 };
 
 use dialoguer::Input;
@@ -11,11 +10,11 @@ use rustic_core::{
     Id, LocalDestination, LsOptions, Progress, ProgressBars, RepositoryOptions, RestoreOptions,
 };
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha224};
 use tempfile::tempdir;
 
 use crate::{
     engine::get_sprout_config,
+    facts::ProjectFactProvider,
     progress::SproutProgressBar,
     repo::{definition::RepositoryDefinition, ProjectRepository},
     snapshot::Snapshot,
@@ -30,6 +29,8 @@ pub struct Project {
     pub config: ProjectConfig,
     pub unique_hash: Option<String>,
     pub home_url: String,
+    #[serde(skip)]
+    facts: Box<dyn ProjectFactProvider>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -42,18 +43,19 @@ pub struct ProjectConfig {
 }
 
 impl Project {
-    pub fn new(path: PathBuf) -> anyhow::Result<Self> {
+    pub fn new(path: PathBuf, facts: Box<dyn ProjectFactProvider>) -> anyhow::Result<Self> {
         let config = Self::load_project_config(&path.join("./sprout.yaml"))?;
 
         Ok(Self {
-            unique_hash: Project::generate_unique_hash(&path)?,
+            unique_hash: facts.generate_unique_hash()?,
             path,
             home_url: format!("https://{}.test", &config.name),
             config,
+            facts,
         })
     }
 
-    pub fn initialise(path: PathBuf) -> anyhow::Result<Self> {
+    pub fn initialise(path: PathBuf, facts: Box<dyn ProjectFactProvider>) -> anyhow::Result<Self> {
         if path.join("./sprout.yaml").exists() {
             return Err(anyhow::anyhow!("A sprout.yaml already exists!"));
         }
@@ -63,9 +65,9 @@ impl Project {
         let mut uploads_path = PathBuf::from("./wp-content/uploads");
         let sprout_config = get_sprout_config()?;
 
-        if let Ok(installed) = Self::is_wordpress_installed(&path) {
+        if let Ok(installed) = facts.is_wordpress_installed() {
             if installed {
-                if let Ok(detected_uploads_path) = Self::get_uploads_dir(&path) {
+                if let Ok(detected_uploads_path) = facts.get_uploads_dir() {
                     uploads_path = PathBuf::from(detected_uploads_path)
                         .strip_prefix(&path)?
                         .to_path_buf();
@@ -83,35 +85,18 @@ impl Project {
 
         fs::write(path.join("./sprout.yaml"), serde_yaml::to_string(&config)?)?;
 
-        Project::new(path)
+        Project::new(path, facts)
     }
 
     pub fn load_project_config(path: &PathBuf) -> anyhow::Result<ProjectConfig> {
         Ok(serde_yaml::from_slice::<ProjectConfig>(&fs::read(path)?)?)
     }
 
-    pub fn is_wordpress_installed(path: &PathBuf) -> anyhow::Result<bool> {
-        let mut cmd = Command::new("wp");
-
-        cmd.current_dir(path)
-            .arg("core")
-            .arg("is-installed")
-            .stderr(Stdio::null())
-            .stdin(Stdio::null())
-            .stdout(Stdio::null());
-
-        let mut child = cmd.spawn()?;
-
-        let output = child.wait()?;
-
-        Ok(output.success())
-    }
-
     pub fn determine_home_url(&mut self) -> anyhow::Result<()> {
         let progress = SproutProgressBar {};
         let spinner = progress.progress_spinner("Loading WordPress project with WP-CLI...");
 
-        let home_url = match Self::get_home_url(&self.path) {
+        let home_url = match self.facts.get_home_url() {
             Ok(url) => url,
             Err(e) => {
                 spinner.finish();
@@ -134,171 +119,27 @@ impl Project {
         Ok(())
     }
 
-    pub fn get_home_url(path: &PathBuf) -> anyhow::Result<String> {
-        let mut cmd = Command::new("wp");
-
-        cmd.current_dir(path)
-            .arg("option")
-            .arg("get")
-            .arg("home")
-            .stderr(Stdio::null())
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped());
-
-        let child = cmd.spawn()?;
-
-        let output = child.wait_with_output()?;
-
-        if !output.status.success() {
-            return Err(anyhow::anyhow!(
-                "Could not determine WordPress home URL via WP-CLI"
-            ));
-        }
-
-        Ok(String::from_utf8_lossy(&output.stdout)
-            .to_string()
-            .trim()
-            .to_string())
-    }
-
-    pub fn get_content_dir(path: &PathBuf) -> anyhow::Result<String> {
-        let mut cmd = Command::new("wp");
-
-        cmd.current_dir(path)
-            .arg("config")
-            .arg("get")
-            .arg("WP_CONTENT_DIR")
-            .stderr(Stdio::null())
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped());
-
-        let child = cmd.spawn()?;
-
-        let output = child.wait_with_output()?;
-
-        Ok(String::from_utf8_lossy(&output.stdout)
-            .to_string()
-            .trim()
-            .to_string())
-    }
-
-    pub fn get_uploads_dir(path: &PathBuf) -> anyhow::Result<String> {
-        let mut cmd = Command::new("wp");
-
-        cmd.current_dir(path)
-            .arg("option")
-            .arg("get")
-            .arg("upload_path")
-            .stderr(Stdio::null())
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped());
-
-        let child = cmd.spawn()?;
-
-        let output = child.wait_with_output()?;
-
-        let upload_path = String::from_utf8_lossy(&output.stdout)
-            .to_string()
-            .trim()
-            .to_string();
-
-        if upload_path.is_empty() {
-            return Ok(format!("{}/uploads", Self::get_content_dir(path)?));
-        }
-
-        Ok(upload_path)
-    }
-
-    pub fn generate_unique_hash(path: &PathBuf) -> anyhow::Result<Option<String>> {
-        let mut cmd = Command::new("git");
-
-        cmd.current_dir(path)
-            .arg("rev-list")
-            .arg("--parents")
-            .arg("HEAD")
-            .stderr(Stdio::null())
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped());
-
-        let child = cmd.spawn()?;
-
-        let output = child.wait_with_output()?;
-
-        if !output.status.success() {
-            return Ok(None);
-        }
-
-        let output = String::from_utf8_lossy(&output.stdout);
-
-        let first_sha = output
-            .to_string()
-            .trim()
-            .split('\n')
-            .last()
-            .unwrap()
-            .to_string();
-
-        let hash = Sha224::digest(first_sha);
-
-        Ok(Some(format!("{:x}", hash)))
-    }
-
     pub fn dump_database(&self, path: &Path) -> anyhow::Result<()> {
         let progress = SproutProgressBar {};
         let spinner = progress.progress_spinner("Exporting database...");
-
-        let mut cmd = Command::new("wp");
-
-        cmd.current_dir(&self.path)
-            .arg("search-replace")
-            .arg(&self.home_url)
-            .arg("__SPROUT__HOME__")
-            .arg(format!("--export={}", path.to_string_lossy()))
-            .stderr(Stdio::null())
-            .stdin(Stdio::null())
-            .stdout(Stdio::null());
-
-        let mut child = cmd.spawn()?;
-        child.wait()?;
+        let ret = self.facts.dump_database(path, &self.home_url);
 
         spinner.finish();
 
-        Ok(())
+        ret
     }
 
     pub fn import_database(&self, path: PathBuf) -> anyhow::Result<()> {
-        let mut cmd = Command::new("wp");
-
         let progress = SproutProgressBar {};
         let spinner = progress.progress_spinner("Importing database...");
 
-        cmd.current_dir(&self.path)
-            .arg("db")
-            .arg("import")
-            .arg(path.as_os_str())
-            .stderr(Stdio::null())
-            .stdin(Stdio::null())
-            .stdout(Stdio::null());
-
-        let mut child = cmd.spawn()?;
-        child.wait()?;
+        self.facts.import_database(&path)?;
 
         spinner
             .bar
             .set_message(format!("Setting home URL to {}", &self.home_url));
 
-        let mut cmd = Command::new("wp");
-
-        cmd.current_dir(&self.path)
-            .arg("search-replace")
-            .arg("__SPROUT__HOME__")
-            .arg(&self.home_url)
-            .stderr(Stdio::null())
-            .stdin(Stdio::null())
-            .stdout(Stdio::null());
-
-        let mut child = cmd.spawn()?;
-        child.wait()?;
+        self.facts.postprocess_database(&self.home_url)?;
 
         spinner.finish();
 
