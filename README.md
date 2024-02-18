@@ -1,7 +1,18 @@
+<div align="center">
+
 # Sprout 
-*Fast, deduplicated content and database seeding for WordPress.*
+
+**Fast, deduplicated content and database seeding for WordPress.**
 
 **[Documentation](https://talss89.github.io/sprout/) | [Install](https://talss89.github.io/sprout/install/) | [Releases](https://github.com/talss89/sprout/releases)**
+
+![GitHub Release](https://img.shields.io/github/v/release/talss89/sprout?sort=semver&display_name=release&style=flat-square&label=Latest)
+![Documentation Build](https://img.shields.io/github/actions/workflow/status/talss89/sprout/docs.yaml?style=flat-square&label=Docs)
+![Test Status](https://img.shields.io/github/actions/workflow/status/talss89/sprout/test.yaml?style=flat-square&branch=main&label=Test%20suite)
+
+</div>
+
+---
 
 - Store your uploads and database in a secure, central location and easily let your team get up and running with the correct version of content **with a one-liner - `sprout seed`**.
   
