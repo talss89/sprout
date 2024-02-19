@@ -42,7 +42,7 @@ impl TestContext {
 
         RepositoryDefinition::create(
             &RepositoryDefinition {
-                access_key: "TEST".to_string(),
+                repo_key: "TEST".to_string(),
                 repo: BackendOptions {
                     repository: Some(self.repo_path.path().to_string_lossy().to_string()),
                     ..BackendOptions::default()
@@ -56,7 +56,7 @@ impl TestContext {
         self.engine.write_config(&sprout_config)?;
 
         let (_, definition) = RepositoryDefinition::get(&self.engine, "test")?;
-        let repo_opts = RepositoryOptions::default().password(definition.access_key);
+        let repo_opts = RepositoryOptions::default().password(definition.repo_key);
 
         let _ = ProjectRepository::initialise(
             definition.repo.clone(),
