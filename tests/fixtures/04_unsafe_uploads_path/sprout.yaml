@@ -1,0 +1,5 @@
+name: unsafe-escape
+branch: main
+snapshot: null
+uploads_path: ../../some-escape
+repo: local-repo
