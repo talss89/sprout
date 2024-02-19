@@ -271,3 +271,76 @@ fn test_snapshot_branching() -> TestResult {
 
     Ok(())
 }
+
+#[test]
+fn test_project_snapshot_respected() -> TestResult {
+    let ctx = TestContext::new()?;
+    let project_ctx = TestProjectContext::new("https://invalid-project.test")?;
+
+    let size_limit = 100 * 1024 * 1024;
+
+    ctx.setup_single_repo()?;
+
+    let _ = content_generator::generate_random_uploads(
+        &project_ctx
+            .project_path
+            .path()
+            .join("uploads")
+            .to_path_buf(),
+        size_limit,
+    )?;
+
+    let mut project = Project::initialise(
+        &ctx.engine,
+        project_ctx.project_path.path().to_path_buf(),
+        project_ctx.facts.clone(),
+    )?;
+
+    let repo = project.open_repo("TEST")?;
+
+    let snapshot = repo.snapshot(true)?;
+    let snapshot_2 = repo.snapshot(true)?;
+    let snapshot_3 = repo.snapshot(true)?;
+
+    let (snapshots, errors) = project.get_all_snapshots(&repo)?;
+
+    assert_eq!(errors.len(), 0, "Listing snapshots returned errors");
+
+    assert_eq!(
+        snapshots.len(),
+        3,
+        "Expected 3 snapshots, got {}",
+        snapshots.len(),
+    );
+
+    let latest = project.get_active_snapshot(&repo)?;
+
+    assert_eq!(
+        latest.id, snapshot_3.id,
+        "Latest snapshot returned from repo was not the last snapshot we took"
+    );
+
+    project.update_snapshot_id(snapshot_2.id, snapshot.get_branch()?)?;
+
+    let project = Project::new(
+        &ctx.engine,
+        project_ctx.project_path.path().to_path_buf(),
+        project_ctx.facts,
+    )?;
+
+    assert_eq!(
+        project.config.snapshot.unwrap(),
+        snapshot_2.id,
+        "Updated snapshot was not saved against project sprout.yaml"
+    );
+
+    let repo = project.open_repo("TEST")?;
+    let current = project.get_active_snapshot(&repo)?;
+
+    assert_eq!(
+        current.id, snapshot_2.id,
+        "Project reported the wrong current snapshot ID"
+    );
+
+    Ok(())
+}
