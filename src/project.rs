@@ -54,6 +54,10 @@ impl Project {
     ) -> anyhow::Result<Self> {
         let config = Self::load_project_config(&path.join("sprout.yaml")).map_err(|_| { anyhow::anyhow!("Is this a project? sprout.yaml is missing. Use `sprout init` to initialise a new project.")})?;
 
+        if !config.uploads_path.is_relative() {
+            return Err(anyhow::anyhow!("Project uploads path must be relative"));
+        }
+
         Ok(Self {
             unique_hash: facts.generate_unique_hash()?,
             path,
