@@ -17,6 +17,7 @@ pub fn project_table(snapshots: &Vec<Snapshot>) -> anyhow::Result<String> {
     )?;
 
     for stash in snapshots {
+        let stats = stash.get_stats();
         write!(
             &mut tw,
             "{}",
@@ -25,19 +26,25 @@ pub fn project_table(snapshots: &Vec<Snapshot>) -> anyhow::Result<String> {
                 stash.id.to_hex().to_string(),
                 stash.get_branch().unwrap_or("???".to_string()),
                 stash.get_total_files(),
-                format!(
-                    "({}/{}/{})",
-                    stash.get_files_new().to_string().green(),
-                    stash.get_files_changed().to_string().blue(),
-                    stash.get_files_unmodified().to_string().yellow()
-                )
-                .dimmed(),
+                match &stats {
+                    Ok(stats) => format!(
+                        "({}/{}/{})",
+                        stats.new.to_string().green(),
+                        stats.changed.to_string().blue(),
+                        stats.unmodified.to_string().yellow()
+                    )
+                    .dimmed(),
+                    Err(_) => "(Err)".to_string().red(),
+                },
                 format!(
                     "{} {}",
                     HumanBytes(stash.get_total_bytes()),
-                    format!("(+{})", HumanBytes(stash.get_data_added())).dimmed()
+                    match &stats {
+                        Ok(stats) => format!("(+{})", HumanBytes(stats.data_added)).dimmed(),
+                        Err(_) => "(Err)".to_string().red(),
+                    }
                 ),
-                stash.db_snapshot.time
+                stash.snapshot.time
             )
             .normal()
         )?;

@@ -99,7 +99,7 @@ impl Stash {
     pub fn restore(&self, project: &Project, snap_id: Id) -> anyhow::Result<()> {
         info!("Restoring stash...");
         let repo = self.open_stash(project)?;
-        let snapshot = Snapshot::from_db_snapshot_id(&repo.repo, snap_id)?;
+        let snapshot = Snapshot::from_snapshot_id(&repo.repo, snap_id)?;
 
         project.restore_from_snapshot(&repo, &snapshot)?;
 
@@ -117,7 +117,7 @@ impl Stash {
     pub fn get_stash_by_id(&self, id: Id) -> anyhow::Result<Snapshot> {
         let repo = self.direct_open_stash()?;
 
-        let snapshot = Snapshot::from_db_snapshot_id(&repo, id)?;
+        let snapshot = Snapshot::from_snapshot_id(&repo, id)?;
 
         Ok(snapshot)
     }
@@ -125,11 +125,11 @@ impl Stash {
     pub fn drop(&self, id: Id) -> anyhow::Result<()> {
         let repo = self.direct_open_stash()?;
 
-        let snapshot = Snapshot::from_db_snapshot_id(&repo, id)?;
+        let snapshot = Snapshot::from_snapshot_id(&repo, id)?;
 
         let repo = repo.open()?;
 
-        let ids = vec![snapshot.db_snapshot.id, snapshot.uploads_snapshot.id];
+        let ids = vec![snapshot.snapshot.id];
 
         repo.delete_snapshots(&ids)?;
 
