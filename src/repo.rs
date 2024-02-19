@@ -93,7 +93,7 @@ impl ProjectRepository {
 
         let source = PathList::from_string(&db_filename.to_string_lossy())?;
 
-        let snap = SnapshotOptions::default()
+        let mut snap = SnapshotOptions::default()
             .add_tags(
                 format!(
                     "sprt_obj:database,sprt_uniq:{},sprt_branch:{}",
@@ -106,8 +106,9 @@ impl ProjectRepository {
                 .as_str(),
             )?
             .host(self.project.config.name.to_owned())
-            .command(format!("sprout-{}", PKG_VERSION))
             .to_snapshot()?;
+
+        snap.program_version = format!("sprout-{}", PKG_VERSION);
 
         // Create snapshot
         let snap = repo.backup(&backup_opts, &source, snap)?;
@@ -139,15 +140,15 @@ impl ProjectRepository {
 
         let repo = repo.clone().open()?.to_indexed_ids()?;
 
-        if !self.project.config.uploads_path.exists() {
-            fs::create_dir_all(&self.project.config.uploads_path)?;
+        let resolved_uploads_path =
+            fs::canonicalize(&self.project.path)?.join(&self.project.config.uploads_path);
+
+        if !resolved_uploads_path.exists() {
+            fs::create_dir_all(&resolved_uploads_path)?;
         }
 
-        let source = PathList::from_string(
-            &fs::canonicalize(&self.project.config.uploads_path)
-                .unwrap()
-                .to_string_lossy(),
-        )?;
+        let source = PathList::from_string(&resolved_uploads_path.to_string_lossy())?;
+
         let mut snap = SnapshotOptions::default()
             .add_tags(
                 format!(

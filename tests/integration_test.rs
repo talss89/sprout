@@ -1,12 +1,14 @@
 mod common;
 
-use crate::common::TestResult;
+use crate::common::{content_generator, TestProjectContext, TestResult};
 use assert_cmd::Command;
 use common::TestContext;
 use predicates::prelude::*;
 
 use rustic_backend::BackendOptions;
-use sprout::{repo::definition::RepositoryDefinition, stash::Stash};
+use sprout::{
+    project::Project, repo::definition::RepositoryDefinition, snapshot::Snapshot, stash::Stash,
+};
 
 #[test]
 fn test_prints_usage() -> TestResult {
@@ -105,6 +107,102 @@ fn test_repo_definitions() -> TestResult {
         )
         .is_err(),
         "Duplicate repo definition should generate an error!"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_invalid_project() -> TestResult {
+    let ctx = TestContext::new()?;
+    let project_ctx = TestProjectContext::new("https://invalid-project.test")?;
+
+    ctx.engine.ensure_home()?;
+
+    let project = Project::new(
+        &ctx.engine,
+        project_ctx.project_path.path().to_path_buf(),
+        project_ctx.facts,
+    );
+
+    assert!(
+        project.is_err(),
+        "Uninitialised project should return Err()"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_project_snapshot() -> TestResult {
+    let ctx = TestContext::new()?;
+    let project_ctx = TestProjectContext::new("https://invalid-project.test")?;
+
+    let size_limit = 100 * 1024 * 1024;
+
+    ctx.setup_single_repo()?;
+
+    let _ = content_generator::generate_random_uploads(
+        &project_ctx
+            .project_path
+            .path()
+            .join("uploads")
+            .to_path_buf(),
+        size_limit,
+    )?;
+
+    let project = Project::initialise(
+        &ctx.engine,
+        project_ctx.project_path.path().to_path_buf(),
+        project_ctx.facts,
+    )?;
+
+    let repo = project.open_repo("TEST")?;
+    let snapshot = repo.snapshot(true)?;
+
+    assert!(
+        snapshot
+            .uploads_snapshot
+            .summary
+            .as_ref()
+            .unwrap()
+            .total_bytes_processed
+            < size_limit
+            && snapshot
+                .uploads_snapshot
+                .summary
+                .as_ref()
+                .unwrap()
+                .total_bytes_processed
+                > size_limit - (5 * 1024 * 1024),
+        "Snapshot of uploads should be within 5MB of test size. Saw: {}, expected: >{}",
+        snapshot
+            .uploads_snapshot
+            .summary
+            .as_ref()
+            .unwrap()
+            .total_bytes_processed,
+        size_limit - (5 * 1024 * 1024)
+    );
+
+    let snapshot = repo.snapshot(true)?;
+
+    let (snapshots, errors) = project.get_all_snapshots(&repo)?;
+
+    assert_eq!(errors.len(), 0, "Listing snapshots returned errors");
+
+    assert_eq!(
+        snapshots.len(),
+        2,
+        "Expected 2 snapshots, got {}",
+        snapshots.len(),
+    );
+
+    let latest = project.get_active_snapshot(&repo)?;
+
+    assert_eq!(
+        latest.id, snapshot.id,
+        "Latest snapshot returned from repo was not the last snapshot we took"
     );
 
     Ok(())

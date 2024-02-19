@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct FixtureFacts {
     pub path: PathBuf,
     pub is_wordpress_installed: bool,
@@ -25,7 +25,15 @@ impl ProjectFactProvider for FixtureFacts {
     }
 
     fn get_uploads_dir(&self) -> Result<String> {
-        Ok(self.path.join("uploads/").to_string_lossy().to_string())
+        let uploads_path = self.path.join("uploads/");
+        if !uploads_path.exists() {
+            fs::create_dir(&uploads_path)?;
+        }
+
+        Ok(fs::canonicalize(uploads_path)
+            .unwrap()
+            .to_string_lossy()
+            .to_string())
     }
 
     fn generate_unique_hash(&self) -> Result<Option<String>> {
