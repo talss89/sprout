@@ -47,6 +47,19 @@ pub struct ProjectConfig {
 }
 
 impl Project {
+    fn guard_unsafe_uploads(path: &PathBuf) -> anyhow::Result<()> {
+        if !path.is_relative() {
+            return Err(anyhow::anyhow!("Project uploads path must be relative"));
+        }
+
+        if path.starts_with("../") {
+            return Err(anyhow::anyhow!(
+                "Project uploads path must not traverse out of project"
+            ));
+        }
+        Ok(())
+    }
+
     pub fn new(
         engine: &Engine,
         path: PathBuf,
@@ -54,9 +67,7 @@ impl Project {
     ) -> anyhow::Result<Self> {
         let config = Self::load_project_config(&path.join("sprout.yaml")).map_err(|_| { anyhow::anyhow!("Is this a project? sprout.yaml is missing. Use `sprout init` to initialise a new project.")})?;
 
-        if !config.uploads_path.is_relative() {
-            return Err(anyhow::anyhow!("Project uploads path must be relative"));
-        }
+        Self::guard_unsafe_uploads(&config.uploads_path)?;
 
         Ok(Self {
             unique_hash: facts.generate_unique_hash()?,
@@ -79,7 +90,7 @@ impl Project {
 
         let path = fs::canonicalize(path).unwrap();
 
-        let mut uploads_path = PathBuf::from("./wp-content/uploads");
+        let mut uploads_path = PathBuf::from("wp-content/uploads");
         let sprout_config = engine.get_config()?;
 
         if let Ok(installed) = facts.is_wordpress_installed() {
