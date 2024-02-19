@@ -90,7 +90,12 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
     let sprout_home = engine.get_home();
     engine.ensure_home()?;
 
-    std::env::set_current_dir(&options.path)?;
+    std::env::set_current_dir(&options.path).map_err(|_| {
+        anyhow::anyhow!(
+            "Unable to set path to {}. Does it exist?",
+            &options.path.display()
+        )
+    })?;
 
     let facts = Box::new(WordPress {
         path: options.path.to_owned(),
