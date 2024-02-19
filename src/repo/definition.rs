@@ -8,7 +8,7 @@ use crate::engine::Engine;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RepositoryDefinition {
-    pub access_key: String,
+    pub repo_key: String,
 
     #[serde(flatten)]
     pub repo: BackendOptions,

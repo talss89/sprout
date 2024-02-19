@@ -172,8 +172,8 @@ impl Project {
         Ok(())
     }
 
-    pub fn open_repo(&self, access_key: &str) -> anyhow::Result<ProjectRepository> {
-        let repo_opts = RepositoryOptions::default().password(access_key);
+    pub fn open_repo(&self, repo_key: &str) -> anyhow::Result<ProjectRepository> {
+        let repo_opts = RepositoryOptions::default().password(repo_key);
         let (_, definition) = RepositoryDefinition::get(&self.engine, self.config.repo.as_str())?;
         let repo = ProjectRepository::new(self, definition.repo, repo_opts)?;
 

@@ -154,7 +154,7 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
                 info!("Creating a new Sprout repository definition...");
 
                 let definition = RepositoryDefinition {
-                    access_key: "".to_string(),
+                    repo_key: "".to_string(),
                     repo: BackendOptions {
                         ..Default::default()
                     },
@@ -203,22 +203,22 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
                     .spaces(false)
                     .strict(true);
 
-                let generated_access_key = pg.generate_one().unwrap();
+                let generated_repo_key = pg.generate_one().unwrap();
 
                 let (definition_path, mut definition) =
                     RepositoryDefinition::get(engine, &args.label)?;
 
-                let access_key = match args.access_key {
-                    Some(access_key) => access_key,
+                let repo_key = match args.repo_key {
+                    Some(repo_key) => repo_key,
                     None => {
-                        if definition.access_key.is_empty() {
+                        if definition.repo_key.is_empty() {
                             Input::with_theme(&CliTheme::default())
                                 .with_prompt("Please set a secure access key for this repository.")
-                                .default(generated_access_key.to_string())
+                                .default(generated_repo_key.to_string())
                                 .interact_text()
                                 .unwrap()
                         } else {
-                            definition.access_key
+                            definition.repo_key
                         }
                     }
                 };
@@ -227,7 +227,7 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
                 let spinner =
                     progress.progress_spinner(format!("Initialising repository {}", &args.label));
 
-                let repo_opts = RepositoryOptions::default().password(&access_key);
+                let repo_opts = RepositoryOptions::default().password(&repo_key);
 
                 let _ = ProjectRepository::initialise(
                     definition.repo.clone(),
@@ -238,7 +238,7 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
 
                 spinner.finish();
 
-                definition.access_key = access_key;
+                definition.repo_key = repo_key;
 
                 RepositoryDefinition::save(&definition, &definition_path)?;
 
@@ -260,7 +260,7 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
 
             let (_, definition) = RepositoryDefinition::get(engine, &project.config.repo)?;
 
-            let repo = project.open_repo(&definition.access_key)?;
+            let repo = project.open_repo(&definition.repo_key)?;
 
             if let Some(branch) = args.branch {
                 if branch != project.config.branch {
@@ -345,7 +345,7 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
                 }
             }
 
-            let repo = project.open_repo(&definition.access_key)?;
+            let repo = project.open_repo(&definition.repo_key)?;
 
             let snapshot = project.get_active_snapshot(&repo)?;
 
@@ -369,7 +369,7 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
 
             let (_, definition) = RepositoryDefinition::get(engine, &project.config.repo)?;
 
-            let repo = project.open_repo(&definition.access_key)?;
+            let repo = project.open_repo(&definition.repo_key)?;
 
             let (snapshots, errors) = project.get_all_snapshots(&repo)?;
 

@@ -94,7 +94,7 @@ pub struct RepoInitArgs {
 
     /// Set the repository access key
     #[arg(short, long)]
-    pub access_key: Option<String>,
+    pub repo_key: Option<String>,
 }
 
 #[derive(Args, Debug)]

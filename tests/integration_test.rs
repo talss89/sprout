@@ -67,7 +67,7 @@ fn test_repo_definitions() -> TestResult {
 
     RepositoryDefinition::create(
         &RepositoryDefinition {
-            access_key: "TEST1".to_string(),
+            repo_key: "TEST1".to_string(),
             repo: BackendOptions::default(),
         },
         &ctx.engine.get_home().join("repos/test-1.yaml"),
@@ -75,7 +75,7 @@ fn test_repo_definitions() -> TestResult {
 
     RepositoryDefinition::create(
         &RepositoryDefinition {
-            access_key: "TEST2".to_string(),
+            repo_key: "TEST2".to_string(),
             repo: BackendOptions::default(),
         },
         &ctx.engine.get_home().join("repos/test-2.yaml"),
@@ -88,9 +88,7 @@ fn test_repo_definitions() -> TestResult {
     );
 
     assert_eq!(
-        RepositoryDefinition::get(&ctx.engine, "test-2")?
-            .1
-            .access_key,
+        RepositoryDefinition::get(&ctx.engine, "test-2")?.1.repo_key,
         "TEST2".to_string(),
         "Access key not saved correctly"
     );
@@ -98,7 +96,7 @@ fn test_repo_definitions() -> TestResult {
     assert!(
         RepositoryDefinition::create(
             &RepositoryDefinition {
-                access_key: "TEST2".to_string(),
+                repo_key: "TEST2".to_string(),
                 repo: BackendOptions::default(),
             },
             &ctx.engine.get_home().join("repos/test-2.yaml"),
