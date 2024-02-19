@@ -1,5 +1,3 @@
-use std::fs;
-
 use anyhow::Result;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
