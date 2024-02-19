@@ -1,8 +1,10 @@
 use std::{
+    collections::HashSet,
     fs,
     path::{Path, PathBuf},
 };
 
+use capturing_glob::glob;
 use dialoguer::Input;
 
 use log::{info, warn};
@@ -194,11 +196,50 @@ impl Project {
         repo.get_all_snapshots_for_project(self)
     }
 
+    fn local_uploads_to_delete(
+        &self,
+        destination: &PathBuf,
+        from_remote: HashSet<PathBuf>,
+    ) -> anyhow::Result<HashSet<PathBuf>> {
+        let local: HashSet<PathBuf> = glob(&format!("{}/(**/*)", destination.to_string_lossy()))
+            .expect("Failed to read glob pattern")
+            .flatten()
+            .map(|e| e.path().to_path_buf())
+            .collect();
+
+        Ok(&local - &from_remote)
+    }
+
     pub fn restore_from_snapshot(
         &self,
         repo: &ProjectRepository,
         snapshot: &Snapshot,
     ) -> anyhow::Result<()> {
+        let destination = fs::canonicalize(&self.path)?.join(&self.config.uploads_path);
+
+        /*
+         * Disallow absolute urls - we don't want to be deleting or writing outside of our project.
+         */
+        if !self.config.uploads_path.is_relative() {
+            return Err(anyhow::anyhow!("Project uploads path must be relative"));
+        }
+
+        /*
+         * Disallow uploads traversal outside of the project
+         */
+        if !fs::canonicalize(&destination)?.starts_with(fs::canonicalize(&self.path)?) {
+            return Err(anyhow::anyhow!(
+                "Project uploads path be a child of the project itself"
+            ));
+        }
+
+        /*
+         * Don't allow restoring to the root of the project - this will wipe out our sprout.yaml (and everything else!)
+         */
+        if destination == fs::canonicalize(&self.path)? {
+            return Err(anyhow::anyhow!("Project uploads path must not evaluate to the same directory as the project itself"));
+        }
+
         let rustic_repo = repo.repo.clone().open()?.to_indexed()?;
         let uploads_node = repo.get_uploads_node(snapshot)?;
         let db_node = repo.get_db_node(snapshot)?;
@@ -207,7 +248,23 @@ impl Project {
         let streamer_opts = LsOptions::default();
         let ls = rustic_repo.ls(&uploads_node, &streamer_opts)?;
 
-        let destination = fs::canonicalize(&self.path)?.join(&self.config.uploads_path); // restore to this destination dir
+        let from_remote: HashSet<PathBuf> = ls
+            .clone()
+            .take_while(|x| x.is_ok())
+            .map(|x| destination.join(&x.unwrap().0))
+            .collect();
+
+        let to_remove = self.local_uploads_to_delete(&destination, from_remote)?;
+
+        for path in to_remove {
+            if path.is_dir() {
+                fs::remove_dir_all(path)?;
+            } else if path.is_file() {
+                fs::remove_file(path)?;
+            }
+        }
+
+        // restore to this destination dir
         let create = true; // create destination dir, if it doesn't exist
         let dest = LocalDestination::new(
             &destination.to_string_lossy(),
