@@ -5,7 +5,8 @@ use assert_cmd::Command;
 use common::TestContext;
 use predicates::prelude::*;
 
-use sprout::stash::Stash;
+use rustic_backend::BackendOptions;
+use sprout::{repo::definition::RepositoryDefinition, stash::Stash};
 
 #[test]
 fn test_prints_usage() -> TestResult {
@@ -53,6 +54,57 @@ fn test_creates_stash() -> TestResult {
     assert!(
         ctx.engine.get_stash_path().join("config").exists(),
         "Stash was not created"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_repo_definitions() -> TestResult {
+    let ctx = TestContext::new()?;
+
+    ctx.engine.ensure_home()?;
+
+    RepositoryDefinition::create(
+        &RepositoryDefinition {
+            access_key: "TEST1".to_string(),
+            repo: BackendOptions::default(),
+        },
+        &ctx.engine.get_home().join("repos/test-1.yaml"),
+    )?;
+
+    RepositoryDefinition::create(
+        &RepositoryDefinition {
+            access_key: "TEST2".to_string(),
+            repo: BackendOptions::default(),
+        },
+        &ctx.engine.get_home().join("repos/test-2.yaml"),
+    )?;
+
+    assert_eq!(
+        RepositoryDefinition::list(&ctx.engine)?.len(),
+        2,
+        "Repository definitions were not saved"
+    );
+
+    assert_eq!(
+        RepositoryDefinition::get(&ctx.engine, "test-2")?
+            .1
+            .access_key,
+        "TEST2".to_string(),
+        "Access key not saved correctly"
+    );
+
+    assert!(
+        RepositoryDefinition::create(
+            &RepositoryDefinition {
+                access_key: "TEST2".to_string(),
+                repo: BackendOptions::default(),
+            },
+            &ctx.engine.get_home().join("repos/test-2.yaml"),
+        )
+        .is_err(),
+        "Duplicate repo definition should generate an error!"
     );
 
     Ok(())
