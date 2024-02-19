@@ -158,14 +158,14 @@ fn test_project_snapshot() -> TestResult {
 
     assert!(
         snapshot
-            .uploads_snapshot
+            .snapshot
             .summary
             .as_ref()
             .unwrap()
             .total_bytes_processed
             < size_limit
             && snapshot
-                .uploads_snapshot
+                .snapshot
                 .summary
                 .as_ref()
                 .unwrap()
@@ -173,7 +173,7 @@ fn test_project_snapshot() -> TestResult {
                 > size_limit - (5 * 1024 * 1024),
         "Snapshot of uploads should be within 5MB of test size. Saw: {}, expected: >{}",
         snapshot
-            .uploads_snapshot
+            .snapshot
             .summary
             .as_ref()
             .unwrap()

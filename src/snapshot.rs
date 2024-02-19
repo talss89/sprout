@@ -6,28 +6,22 @@ use crate::repo::RusticRepo;
 #[derive(Debug, Serialize, Clone)]
 pub struct Snapshot {
     pub id: Id,
-    pub uploads_snapshot: SnapshotFile,
-    pub db_snapshot: SnapshotFile,
+    pub snapshot: SnapshotFile,
+}
+
+pub struct SnapshotStats {
+    pub new: u64,
+    pub changed: u64,
+    pub unmodified: u64,
+    pub data_added: u64,
 }
 
 impl Snapshot {
-    pub fn from_db_snapshot_id(repo: &RusticRepo<()>, db_snapshot_id: Id) -> anyhow::Result<Self> {
+    pub fn from_snapshot_id(repo: &RusticRepo<()>, snapshot_id: Id) -> anyhow::Result<Self> {
         let repo = repo.clone().open()?.to_indexed()?;
 
-        let db_snapshot = repo.get_snapshot_from_str(&db_snapshot_id.to_hex(), |snap| {
-            if snap.tags.contains("sprt_obj:database") && snap.id == db_snapshot_id {
-                return true;
-            }
-
-            false
-        })?;
-
-        let uploads_snapshot = repo.get_snapshot_from_str("latest", |snap| {
-            if snap.tags.contains("sprt_obj:uploads")
-                && snap
-                    .tags
-                    .contains(&format!("sprt_db:{}", db_snapshot_id.to_hex().as_str()))
-            {
+        let snapshot = repo.get_snapshot_from_str(&snapshot_id.to_hex(), |snap| {
+            if snap.tags.contains("sprt_obj:bundle") && snap.id == snapshot_id {
                 return true;
             }
 
@@ -35,34 +29,15 @@ impl Snapshot {
         })?;
 
         Ok(Self {
-            id: db_snapshot.id,
-            db_snapshot,
-            uploads_snapshot,
+            id: snapshot.id,
+            snapshot,
         })
     }
 
-    pub fn from_db_snapshot(
-        repo: &RusticRepo<()>,
-        db_snapshot: &SnapshotFile,
-    ) -> anyhow::Result<Self> {
-        let repo = repo.clone().open()?.to_indexed()?;
-
-        let uploads_snapshot = repo.get_snapshot_from_str("latest", |snap| {
-            if snap.tags.contains("sprt_obj:uploads")
-                && snap
-                    .tags
-                    .contains(&format!("sprt_db:{}", db_snapshot.id.to_hex().as_str()))
-            {
-                return true;
-            }
-
-            false
-        })?;
-
+    pub fn from_snapshot(snapshot: &SnapshotFile) -> anyhow::Result<Self> {
         Ok(Self {
-            id: db_snapshot.id,
-            db_snapshot: db_snapshot.clone(),
-            uploads_snapshot,
+            id: snapshot.id,
+            snapshot: snapshot.clone(),
         })
     }
 
@@ -82,93 +57,66 @@ impl Snapshot {
         }
     }
 
+    pub fn pack_stats(
+        db_snapshot: &SnapshotFile,
+        uploads_snapshot: &SnapshotFile,
+    ) -> anyhow::Result<String> {
+        let new = db_snapshot.summary.as_ref().unwrap().files_new
+            + uploads_snapshot.summary.as_ref().unwrap().files_new;
+
+        let changed = db_snapshot.summary.as_ref().unwrap().files_changed
+            + uploads_snapshot.summary.as_ref().unwrap().files_changed;
+
+        let unmodified = db_snapshot.summary.as_ref().unwrap().files_unmodified
+            + uploads_snapshot.summary.as_ref().unwrap().files_unmodified;
+
+        let data_added = db_snapshot.summary.as_ref().unwrap().data_added
+            + uploads_snapshot.summary.as_ref().unwrap().data_added;
+
+        Ok(format!("{}/{}/{}/{}", new, changed, unmodified, data_added))
+    }
+
+    pub fn get_stats(&self) -> anyhow::Result<SnapshotStats> {
+        let stats = Self::get_sprout_tag(&self.snapshot, "sprt_stats")?;
+        let parts: Vec<&str> = stats.split('/').collect();
+
+        Ok(SnapshotStats {
+            new: parts.get(0).unwrap_or(&&"0").parse()?,
+            changed: parts.get(1).unwrap_or(&&"0").parse()?,
+            unmodified: parts.get(2).unwrap_or(&&"0").parse()?,
+            data_added: parts.get(3).unwrap_or(&&"0").parse()?,
+        })
+    }
+
     pub fn get_branch(&self) -> anyhow::Result<String> {
-        Self::get_sprout_tag(&self.db_snapshot, "sprt_branch")
+        Self::get_sprout_tag(&self.snapshot, "sprt_branch")
     }
 
     pub fn get_project_name(&self) -> String {
-        self.db_snapshot.hostname.clone()
+        self.snapshot.hostname.clone()
     }
 
     pub fn get_total_files(&self) -> u64 {
-        if self.db_snapshot.summary.is_none() || self.uploads_snapshot.summary.is_none() {
+        if self.snapshot.summary.is_none() {
             return 0u64;
         }
 
-        self.db_snapshot
+        self.snapshot
             .summary
             .as_ref()
             .unwrap()
             .total_files_processed
-            + self
-                .uploads_snapshot
-                .summary
-                .as_ref()
-                .unwrap()
-                .total_files_processed
     }
 
     pub fn get_total_bytes(&self) -> u64 {
-        if self.db_snapshot.summary.is_none() || self.uploads_snapshot.summary.is_none() {
+        if self.snapshot.summary.is_none() {
             return 0u64;
         }
 
-        self.db_snapshot
+        self.snapshot
             .summary
             .as_ref()
             .unwrap()
             .total_bytes_processed
-            + self
-                .uploads_snapshot
-                .summary
-                .as_ref()
-                .unwrap()
-                .total_bytes_processed
-    }
-
-    pub fn get_data_added(&self) -> u64 {
-        if self.db_snapshot.summary.is_none() || self.uploads_snapshot.summary.is_none() {
-            return 0u64;
-        }
-
-        self.db_snapshot.summary.as_ref().unwrap().data_added
-            + self.uploads_snapshot.summary.as_ref().unwrap().data_added
-    }
-
-    pub fn get_files_new(&self) -> u64 {
-        if self.db_snapshot.summary.is_none() || self.uploads_snapshot.summary.is_none() {
-            return 0u64;
-        }
-
-        self.db_snapshot.summary.as_ref().unwrap().files_new
-            + self.uploads_snapshot.summary.as_ref().unwrap().files_new
-    }
-
-    pub fn get_files_changed(&self) -> u64 {
-        if self.db_snapshot.summary.is_none() || self.uploads_snapshot.summary.is_none() {
-            return 0u64;
-        }
-
-        self.db_snapshot.summary.as_ref().unwrap().files_changed
-            + self
-                .uploads_snapshot
-                .summary
-                .as_ref()
-                .unwrap()
-                .files_changed
-    }
-
-    pub fn get_files_unmodified(&self) -> u64 {
-        if self.db_snapshot.summary.is_none() || self.uploads_snapshot.summary.is_none() {
-            return 0u64;
-        }
-
-        self.db_snapshot.summary.as_ref().unwrap().files_unmodified
-            + self
-                .uploads_snapshot
-                .summary
-                .as_ref()
-                .unwrap()
-                .files_unmodified
     }
 }
