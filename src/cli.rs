@@ -10,6 +10,7 @@ mod commands;
 mod repo;
 mod snapshot;
 
+/// CLI Wrapper entrypoint. Pretty prints any return data / exit code / duration.
 pub fn entrypoint(engine: &Engine) {
     let now = SystemTime::now();
     let options = Options::parse();

@@ -20,6 +20,7 @@ use crate::{
     theme::CliTheme,
 };
 
+/// The main entrypoint for our CLI. Returns a CliResponse in the result
 #[allow(clippy::format_in_format_args)]
 pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
     let options = Options::parse();

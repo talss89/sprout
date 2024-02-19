@@ -6,6 +6,7 @@ use std::{fs, path::PathBuf};
 
 use crate::engine::Engine;
 
+/// Represents a repo definition file
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RepositoryDefinition {
     pub repo_key: String,

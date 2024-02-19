@@ -6,12 +6,14 @@ use serde::{Deserialize, Serialize};
 use regex::Captures;
 use regex::Regex;
 
+/// Describes the sprout-config.yaml file, which stores information on how the current user has configured Sprout.
 #[derive(Serialize, Deserialize)]
 pub struct SproutConfig {
     pub stash_key: String,
     pub default_repo: String,
 }
 
+/// Represents core Sprout state and helper functions
 #[derive(Debug, Clone)]
 pub struct Engine {
     pub sprout_home: PathBuf,

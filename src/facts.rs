@@ -4,7 +4,7 @@ use dyn_clone::DynClone;
 use std::path::Path;
 
 pub mod wordpress;
-
+/// A trait to act as an interface between Sprout and WordPress. We can implement ProjectFactProvider for WP-CLI, and also for simple test stubbing.
 pub trait ProjectFactProvider: DynClone + Send + Sync {
     fn is_wordpress_installed(&self) -> Result<bool>;
     fn get_home_url(&self) -> Result<String>;

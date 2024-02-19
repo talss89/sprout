@@ -6,6 +6,7 @@ use std::{
     process::{Command, Stdio},
 };
 
+/// Represents an interface with WordPress via WP-CLI + Git. This struct implements the ProjectFactProvider trait.
 #[derive(Clone)]
 pub struct WordPress {
     pub path: PathBuf,
