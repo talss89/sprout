@@ -260,8 +260,6 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
 
             let (_, definition) = RepositoryDefinition::get(engine, &project.config.repo)?;
 
-            let repo = project.open_repo(&definition.repo_key)?;
-
             if let Some(branch) = args.branch {
                 if branch != project.config.branch {
                     let confirmation = Confirm::with_theme(&CliTheme::default())
@@ -282,6 +280,8 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
                     project.config.branch = branch;
                 }
             }
+
+            let repo = project.open_repo(&definition.repo_key)?;
 
             info!(
                 "Checking the project uniqueness digest against the remote repo for {}:{}...",
