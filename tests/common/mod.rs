@@ -1,3 +1,6 @@
+use std::fs;
+use std::path::Path;
+
 use anyhow::Result;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
@@ -94,5 +97,34 @@ impl TestProjectContext {
             }),
             project_path,
         })
+    }
+
+    pub fn apply_fixture(&self, fixture: &str) -> Result<()> {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures")
+            .join(fixture);
+
+        if !path.exists() {
+            return Err(anyhow::anyhow!("Fixture {} does not exist", fixture));
+        }
+
+        dircpy::CopyBuilder::new(path, &self.project_path)
+            .overwrite(true)
+            .run()?;
+
+        Ok(())
+    }
+
+    pub fn wipe_uploads(&self) -> Result<()> {
+        let path = self.facts.get_uploads_dir().unwrap();
+        let path = Path::new(&path);
+
+        if path.exists() {
+            fs::remove_dir_all(path)?;
+        }
+
+        fs::create_dir_all(path)?;
+
+        Ok(())
     }
 }
