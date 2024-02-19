@@ -50,7 +50,7 @@ impl Project {
         path: PathBuf,
         facts: Box<dyn ProjectFactProvider>,
     ) -> anyhow::Result<Self> {
-        let config = Self::load_project_config(&path.join("sprout.yaml"))?;
+        let config = Self::load_project_config(&path.join("sprout.yaml")).map_err(|_| { anyhow::anyhow!("Is this a project? sprout.yaml is missing. Use `sprout init` to initialise a new project.")})?;
 
         Ok(Self {
             unique_hash: facts.generate_unique_hash()?,
