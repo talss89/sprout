@@ -21,7 +21,7 @@ sprout repo new my-s3-repo
 Sprout will now fire up an editor, allowing you to modify the repo definition. As we're going to use S3, we need to use `opendal:s3` as our `repository`, and set some other options:
 
 ```diff lang="yaml" title="~/.sprout/repos/my-s3-repo.yaml" {2, 5-10}
-access_key: ''
+repo_key: ''
 repository: opendal:s3
 repo-hot: null
 -options: {}
@@ -49,7 +49,7 @@ Now initialise the repo by running:
 sprout repo init my-s3-repo
 ```
 
-Let Sprout create and set a repo access key for you. This is your encryption key for your repo, **not your S3 access key**. They should be unique. *We have a plan to change the terminology here, as it does get confusing!*
+Let Sprout create and set a repo key for you. This is your encryption key for your repo, **not your S3 access key**. They should be unique.
 
 If all goes well, you should see success.
 
@@ -92,7 +92,7 @@ When using a remote storage backend for a repo, we often want to share our repo 
 It's not a good idea to send our S3 access keys and secrets around as part of the definition, so you should replace any sensitive keys with an environment variable. For example:
 
 ```yaml title="~/.sprout/repos/linode.yaml" {5,8}
-access_key: Kheq43pnuJGdidIY0uItHinKIIl34kedImyIs3cr3tsL5l4hCBketjqcjN
+repo_key: Kheq43pnuJGdidIY0uItHinKIIl34kedImyIs3cr3tsL5l4hCBketjqcjN
 repository: opendal:s3
 repo-hot: null
 options:
