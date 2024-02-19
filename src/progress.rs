@@ -39,6 +39,10 @@ impl ProgressBars for SproutProgressBar {
     }
 
     fn progress_spinner(&self, prefix: impl Into<Cow<'static, str>>) -> Self::P {
+        if std::env::var("SPROUT_NO_PROGRESS").is_ok() {
+            return SproutProgress::hidden();
+        }
+
         let p = SproutProgress::spinner();
 
         p.bar.set_message(prefix);
@@ -52,6 +56,10 @@ impl ProgressBars for SproutProgressBar {
     }
 
     fn progress_counter(&self, _prefix: impl Into<Cow<'static, str>>) -> Self::P {
+        if std::env::var("SPROUT_NO_PROGRESS").is_ok() {
+            return SproutProgress::hidden();
+        }
+
         let p = SproutProgress::new();
         p.bar.set_style(
             ProgressStyle::with_template(
@@ -65,6 +73,10 @@ impl ProgressBars for SproutProgressBar {
     }
 
     fn progress_bytes(&self, _prefix: impl Into<Cow<'static, str>>) -> Self::P {
+        if std::env::var("SPROUT_NO_PROGRESS").is_ok() {
+            return SproutProgress::hidden();
+        }
+
         let p = SproutProgress::new();
         p.bar.enable_steady_tick(duration!(100 ms));
         p.bar.set_style(ProgressStyle::with_template("{spinner:^9.green} [{elapsed_precise:}] {wide_bar:.green/cyan.dim} {bytes:.bold}/{total_bytes:} ({eta:})")
