@@ -180,7 +180,11 @@ impl Project {
     }
 
     pub fn get_active_snapshot(&self, repo: &ProjectRepository) -> anyhow::Result<Snapshot> {
-        repo.get_latest_snapshot_for_branch(self, &self.config.branch)
+        if self.config.snapshot.is_some() {
+            Snapshot::from_snapshot_id(&repo.repo, self.config.snapshot.unwrap())
+        } else {
+            repo.get_latest_snapshot_for_branch(self, &self.config.branch)
+        }
     }
 
     pub fn get_all_snapshots(
