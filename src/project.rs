@@ -79,7 +79,6 @@ impl Project {
         if let Ok(installed) = facts.is_wordpress_installed() {
             if installed {
                 if let Ok(detected_uploads_path) = facts.get_uploads_dir() {
-                    println!("{:?}, {:?}", path, detected_uploads_path);
                     uploads_path = PathBuf::from(detected_uploads_path)
                         .strip_prefix(&path)?
                         .to_path_buf();
