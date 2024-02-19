@@ -6,9 +6,7 @@ use common::TestContext;
 use predicates::prelude::*;
 
 use rustic_backend::BackendOptions;
-use sprout::{
-    project::Project, repo::definition::RepositoryDefinition, snapshot::Snapshot, stash::Stash,
-};
+use sprout::{project::Project, repo::definition::RepositoryDefinition, stash::Stash};
 
 #[test]
 fn test_prints_usage() -> TestResult {
