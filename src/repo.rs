@@ -114,7 +114,7 @@ impl ProjectRepository {
         // Create snapshot
         let snap = repo.backup(&backup_opts, &source, snap)?;
 
-        info!("Successfully created DB snapshot");
+        info!("Successfully created DB snapshot fragment");
 
         Ok(snap)
     }
@@ -171,8 +171,11 @@ impl ProjectRepository {
 
         snap.program_version = format!("sprout {}", PKG_VERSION);
 
-        // Create snapshot
-        Ok(repo.backup(&backup_opts, &source, snap)?)
+        let snap = repo.backup(&backup_opts, &source, snap)?;
+
+        info!("Successfully created uploads snapshot fragment");
+
+        Ok(snap)
     }
 
     pub fn snapshot(&self, automatic_parent: bool) -> anyhow::Result<Snapshot> {
@@ -205,7 +208,12 @@ impl ProjectRepository {
         let merged = repo.merge_snapshots(snapshots, &last_modified_node, merged)?;
 
         let snap_ids: Vec<_> = snapshots.iter().map(|sn| sn.id).collect();
+
+        info!("Bundled fragments into snapshot");
+
         repo.delete_snapshots(&snap_ids)?;
+
+        info!("Tidied up snapshot fragments");
 
         Ok(Snapshot {
             id: merged.id,
