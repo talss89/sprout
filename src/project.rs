@@ -50,7 +50,7 @@ impl Project {
         path: PathBuf,
         facts: Box<dyn ProjectFactProvider>,
     ) -> anyhow::Result<Self> {
-        let config = Self::load_project_config(&path.join("./sprout.yaml"))?;
+        let config = Self::load_project_config(&path.join("sprout.yaml"))?;
 
         Ok(Self {
             unique_hash: facts.generate_unique_hash()?,
@@ -67,7 +67,7 @@ impl Project {
         path: PathBuf,
         facts: Box<dyn ProjectFactProvider>,
     ) -> anyhow::Result<Self> {
-        if path.join("./sprout.yaml").exists() {
+        if path.join("sprout.yaml").exists() {
             return Err(anyhow::anyhow!("A sprout.yaml already exists!"));
         }
 
@@ -79,6 +79,7 @@ impl Project {
         if let Ok(installed) = facts.is_wordpress_installed() {
             if installed {
                 if let Ok(detected_uploads_path) = facts.get_uploads_dir() {
+                    println!("{:?}, {:?}", path, detected_uploads_path);
                     uploads_path = PathBuf::from(detected_uploads_path)
                         .strip_prefix(&path)?
                         .to_path_buf();
@@ -94,7 +95,7 @@ impl Project {
             repo: sprout_config.default_repo,
         };
 
-        fs::write(path.join("./sprout.yaml"), serde_yaml::to_string(&config)?)?;
+        fs::write(path.join("sprout.yaml"), serde_yaml::to_string(&config)?)?;
 
         Project::new(engine, path, facts)
     }
@@ -164,7 +165,7 @@ impl Project {
         self.config.branch = branch;
 
         fs::write(
-            self.path.join("./sprout.yaml"),
+            self.path.join("sprout.yaml"),
             serde_yaml::to_string(&self.config)?,
         )?;
 
@@ -203,7 +204,7 @@ impl Project {
         let streamer_opts = LsOptions::default();
         let ls = rustic_repo.ls(&uploads_node, &streamer_opts)?;
 
-        let destination = fs::canonicalize(&self.config.uploads_path)?; // restore to this destination dir
+        let destination = fs::canonicalize(&self.path)?.join(&self.config.uploads_path); // restore to this destination dir
         let create = true; // create destination dir, if it doesn't exist
         let dest = LocalDestination::new(
             &destination.to_string_lossy(),

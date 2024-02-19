@@ -44,6 +44,7 @@ tempfile = "3.9.0"
 assert_cmd = "2.0.13"
 predicates = "3.0.4"
 pretty_assertions = "1.4.0"
+rand = "0.8.5"
 
 [build-dependencies]
 built = "0.7.1"

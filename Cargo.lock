@@ -2946,6 +2946,7 @@ dependencies = [
  "passwords",
  "predicates",
  "pretty_assertions",
+ "rand",
  "regex",
  "rustic_backend",
  "rustic_core",

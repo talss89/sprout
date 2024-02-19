@@ -75,7 +75,7 @@ impl Snapshot {
                 .last()
                 .unwrap()
                 .strip_prefix(&prefix)
-                .unwrap()
+                .ok_or(anyhow::anyhow!("Could not find tag {}", key))?
                 .to_string());
         } else {
             Err(anyhow::anyhow!("Could not find tag {}", key))
