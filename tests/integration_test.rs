@@ -203,3 +203,71 @@ fn test_project_snapshot() -> TestResult {
 
     Ok(())
 }
+
+#[test]
+fn test_snapshot_branching() -> TestResult {
+    let ctx = TestContext::new()?;
+    let project_ctx = TestProjectContext::new("https://invalid-project.test")?;
+
+    let size_limit = 10 * 1024 * 1024;
+
+    ctx.setup_single_repo()?;
+
+    let _ = content_generator::generate_random_uploads(
+        &project_ctx
+            .project_path
+            .path()
+            .join("uploads")
+            .to_path_buf(),
+        size_limit,
+    )?;
+
+    let mut project = Project::initialise(
+        &ctx.engine,
+        project_ctx.project_path.path().to_path_buf(),
+        project_ctx.facts,
+    )?;
+
+    let repo = project.open_repo("TEST")?;
+    let snapshot = repo.snapshot(true)?;
+
+    assert_eq!(
+        snapshot.get_branch()?,
+        "main",
+        "Snapshot should default to `main` branch"
+    );
+
+    project.config.branch = "other-branch".to_string();
+
+    let repo = project.open_repo("TEST")?;
+    let new_snapshot = repo.snapshot(false)?;
+
+    assert_eq!(
+        new_snapshot.get_branch()?,
+        "other-branch",
+        "Snapshot should respect project branch setting"
+    );
+
+    project.update_snapshot_id(new_snapshot.id, project.config.branch.to_owned())?;
+
+    let (snapshots, errors) = project.get_all_snapshots(&repo)?;
+
+    assert_eq!(errors.len(), 0, "Listing snapshots returned errors");
+
+    assert_eq!(
+        snapshots.len(),
+        2,
+        "Expected 2 snapshots, got {}",
+        snapshots.len(),
+    );
+
+    let latest = project.get_active_snapshot(&repo)?;
+
+    assert_eq!(
+        latest.get_branch()?,
+        "other-branch",
+        "Latest snapshot returned from repo was not on the most recent branch"
+    );
+
+    Ok(())
+}
