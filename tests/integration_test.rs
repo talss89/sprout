@@ -1,5 +1,7 @@
 mod common;
 
+use std::{fs, path::Path};
+
 use crate::common::{content_generator, TestProjectContext, TestResult};
 use assert_cmd::Command;
 use common::TestContext;
@@ -340,6 +342,200 @@ fn test_project_snapshot_respected() -> TestResult {
     assert_eq!(
         current.id, snapshot_2.id,
         "Project reported the wrong current snapshot ID"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_seeding() -> TestResult {
+    let ctx = TestContext::new()?;
+    let project_ctx = TestProjectContext::new("https://invalid-project.test")?;
+
+    ctx.setup_single_repo()?;
+    project_ctx.apply_fixture("01_upload_diff_a")?;
+
+    assert!(
+        Path::new(&project_ctx.facts.get_uploads_dir()?)
+            .join("1.txt")
+            .is_file(),
+        "Fixture is missing uploads/1.txt"
+    );
+
+    let project = Project::initialise(
+        &ctx.engine,
+        project_ctx.project_path.path().to_path_buf(),
+        project_ctx.facts.clone(),
+    )?;
+
+    let repo = project.open_repo("TEST")?;
+    let snapshot = repo.snapshot(true)?;
+
+    assert_eq!(
+        snapshot.get_total_files(),
+        4, // 3 (fixture) + 1 (db)
+        "Snapshot has wrong fixture file count"
+    );
+
+    project_ctx.wipe_uploads()?;
+
+    assert!(
+        !Path::new(&project_ctx.facts.get_uploads_dir()?)
+            .join("1.txt")
+            .exists(),
+        "Uploads not wiped"
+    );
+
+    let active = project.get_active_snapshot(&repo)?;
+
+    project.restore_from_snapshot(&repo, &active)?;
+
+    assert!(
+        Path::new(&project_ctx.facts.get_uploads_dir()?)
+            .join("1.txt")
+            .exists(),
+        "1.txt not restored from snapshot"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_seeding_intersect() -> TestResult {
+    let ctx = TestContext::new()?;
+    let project_ctx = TestProjectContext::new("https://invalid-project.test")?;
+
+    ctx.setup_single_repo()?;
+    project_ctx.apply_fixture("01_upload_diff_a")?;
+
+    assert!(
+        Path::new(&project_ctx.facts.get_uploads_dir()?)
+            .join("1.txt")
+            .is_file(),
+        "Fixture is missing uploads/1.txt"
+    );
+
+    let project = Project::initialise(
+        &ctx.engine,
+        project_ctx.project_path.path().to_path_buf(),
+        project_ctx.facts.clone(),
+    )?;
+
+    let repo = project.open_repo("TEST")?;
+    let snapshot_a = repo.snapshot(true)?;
+
+    assert_eq!(
+        snapshot_a.get_total_files(),
+        4, // 3 (fixture) + 1 (db)
+        "Snapshot has wrong fixture file count"
+    );
+
+    project_ctx.wipe_uploads()?;
+    project_ctx.apply_fixture("02_upload_diff_b")?;
+
+    assert!(
+        Path::new(&project_ctx.facts.get_uploads_dir()?)
+            .join("4.txt")
+            .is_file(),
+        "Fixture is missing uploads/4.txt"
+    );
+
+    let snapshot_b = repo.snapshot(true)?;
+
+    assert_eq!(
+        snapshot_b.get_total_files(),
+        4, // 3 (fixture) + 1 (db)
+        "Snapshot has wrong fixture file count"
+    );
+
+    project_ctx.wipe_uploads()?;
+
+    assert!(
+        !Path::new(&project_ctx.facts.get_uploads_dir()?)
+            .join("1.txt")
+            .exists(),
+        "Uploads not wiped"
+    );
+
+    let active = project.get_active_snapshot(&repo)?;
+
+    project.restore_from_snapshot(&repo, &active)?;
+
+    assert!(
+        Path::new(&project_ctx.facts.get_uploads_dir()?)
+            .join("4.txt")
+            .exists(),
+        "4.txt not restored from snapshot"
+    );
+
+    project.restore_from_snapshot(&repo, &snapshot_a)?;
+
+    assert!(
+        !Path::new(&project_ctx.facts.get_uploads_dir()?)
+            .join("4.txt")
+            .exists(),
+        "4.txt should not exist"
+    );
+
+    assert!(
+        Path::new(&project_ctx.facts.get_uploads_dir()?)
+            .join("1.txt")
+            .exists(),
+        "1.txt should exist"
+    );
+
+    assert!(
+        Path::new(&project_ctx.facts.get_uploads_dir()?)
+            .join("3.txt")
+            .exists()
+            && fs::read_to_string(Path::new(&project_ctx.facts.get_uploads_dir()?).join("3.txt"))?
+                == "Three A",
+        "3.txt should exist, but be version A"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_project_path_escape_safety() -> TestResult {
+    let ctx = TestContext::new()?;
+    let project_ctx = TestProjectContext::new("https://invalid-project.test")?;
+
+    ctx.setup_single_repo()?;
+    project_ctx.apply_fixture("03_unsafe_uploads_path")?;
+
+    assert!(
+        Project::new(
+            &ctx.engine,
+            project_ctx.project_path.path().to_path_buf(),
+            project_ctx.facts.clone()
+        )
+        .is_err(),
+        "Uploads path traversal ../ should result in error"
+    );
+
+    project_ctx.apply_fixture("04_unsafe_uploads_path")?;
+
+    assert!(
+        Project::new(
+            &ctx.engine,
+            project_ctx.project_path.path().to_path_buf(),
+            project_ctx.facts.clone()
+        )
+        .is_err(),
+        "Uploads path traversal ../../ should result in error"
+    );
+
+    project_ctx.apply_fixture("05_unsafe_uploads_path")?;
+
+    assert!(
+        Project::new(
+            &ctx.engine,
+            project_ctx.project_path.path().to_path_buf(),
+            project_ctx.facts.clone()
+        )
+        .is_err(),
+        "Absolute uploads path should result in error"
     );
 
     Ok(())
