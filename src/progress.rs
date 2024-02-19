@@ -55,10 +55,10 @@ impl ProgressBars for SproutProgressBar {
         let p = SproutProgress::new();
         p.bar.set_style(
             ProgressStyle::with_template(
-                "{spinner:^9.green} [{elapsed_precise:.dimmed}] [{wide_bar:.dimmed.cyan/blue}] {pos:.dimmed}/{len:.dimmed} ({eta:.dimmed})",
+                "{spinner:^9.green} [{elapsed_precise:}] {wide_bar:.green/cyan.dim} {pos:.bold}/{len:} ({eta:})",
             )
             .unwrap()
-            .progress_chars("#>-"),
+            .progress_chars("▰▶▱"),
         );
 
         p
@@ -67,9 +67,9 @@ impl ProgressBars for SproutProgressBar {
     fn progress_bytes(&self, _prefix: impl Into<Cow<'static, str>>) -> Self::P {
         let p = SproutProgress::new();
         p.bar.enable_steady_tick(duration!(100 ms));
-        p.bar.set_style(ProgressStyle::with_template("{spinner:^9.green} [{elapsed_precise:.dimmed}] [{wide_bar:.dimmed.cyan/blue}] {bytes:.dimmed}/{total_bytes:.dimmed} ({eta:.dimmed})")
+        p.bar.set_style(ProgressStyle::with_template("{spinner:^9.green} [{elapsed_precise:}] {wide_bar:.green/cyan.dim} {bytes:.bold}/{total_bytes:} ({eta:})")
         .unwrap()
-        .progress_chars("#>-"));
+        .progress_chars("▰▶▱"));
 
         p
     }
