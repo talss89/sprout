@@ -35,6 +35,8 @@ pub enum SubCommand {
     Stash(StashArgs),
     /// List available remote snapshots
     Ls,
+    /// Update Sprout to latest release
+    Update,
 }
 
 #[derive(Args, Debug)]

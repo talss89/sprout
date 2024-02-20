@@ -7,7 +7,8 @@ use log::{info, warn};
 use passwords::PasswordGenerator;
 use rustic_backend::BackendOptions;
 use rustic_core::{ConfigOptions, Id, KeyOptions, Progress, ProgressBars, RepositoryOptions};
-use std::io::Write;
+use self_update::cargo_crate_version;
+use std::{io::Write, time::SystemTime};
 
 use crate::{
     cli::clap::{CliResponse, Options, RepoCommand, StashCommand, SubCommand},
@@ -18,6 +19,7 @@ use crate::{
     repo::{definition::RepositoryDefinition, ProjectRepository},
     stash::Stash,
     theme::CliTheme,
+    CFG_OS, CFG_TARGET_ARCH,
 };
 
 /// The main entrypoint for our CLI. Returns a CliResponse in the result
@@ -90,6 +92,20 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
 
     let sprout_home = engine.get_home();
     engine.ensure_home()?;
+
+    match engine.get_update_version() {
+        Ok(version) => {
+            if let Some(version) = version {
+                warn!(
+                    "An update is available - {}. Run `sprout update` to update.",
+                    version.bold().green()
+                )
+            }
+        }
+        Err(e) => {
+            warn!("Could not check for updates: {}", e);
+        }
+    };
 
     std::env::set_current_dir(&options.path).map_err(|_| {
         anyhow::anyhow!(
@@ -505,5 +521,80 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
                 }
             },
         },
+        SubCommand::Update => {
+            let current_version = cargo_crate_version!();
+
+            info!("Checking for updates...");
+
+            let status = self_update::backends::github::Update::configure()
+                .repo_owner("talss89")
+                .repo_name("sprout")
+                .bin_name("sprout")
+                .target(&format!("{}-{}", CFG_OS, CFG_TARGET_ARCH))
+                .current_version(current_version)
+                .no_confirm(true)
+                .show_download_progress(true)
+                .show_output(false)
+                .set_progress_style("{spinner:^9.green} [{elapsed_precise:}] {wide_bar:.green/cyan.dim} {bytes:.bold}/{total_bytes:} ({eta:})".to_string(), "▰▶▱".to_string())
+                .build()?;
+
+            let latest = status.get_latest_release()?;
+
+            if latest.version == current_version {
+                return Ok(CliResponse {
+                    msg: "Already up to date".to_string(),
+                    data: None,
+                });
+            }
+
+            info!("Upgrading to {}...", latest.version.bold().green());
+
+            if !self_update::version::bump_is_compatible(current_version, &latest.version)? {
+                warn!("{}", format!("{:-^72}", "Warning!").red().bold());
+                warn!(
+                    "{}",
+                    "This update may contain breaking changes. Please read the release notes."
+                        .yellow()
+                        .bold()
+                );
+                warn!("{}", format!("{:-^72}", "").red().bold());
+            }
+
+            let confirmation = Confirm::with_theme(&CliTheme::default())
+                .with_prompt(format!(
+                    "This will upgrade Sprout from {} to {} Do you want to continue?",
+                    current_version.dimmed(),
+                    latest.version.green().bold()
+                ))
+                .interact()
+                .unwrap();
+
+            if !confirmation {
+                return Ok(CliResponse {
+                    msg: "User aborted update".to_string(),
+                    data: None,
+                });
+            }
+
+            info!("Starting update...");
+
+            let msg = match status.update()? {
+                self_update::Status::UpToDate(_) => "Already up to date!".to_string(),
+                self_update::Status::Updated(version) => {
+                    format!("Updated to version {}", version.italic())
+                }
+            };
+
+            info!("Update complete.");
+
+            let mut config = engine.get_config()?;
+
+            config.last_update_check = SystemTime::now();
+            config.update_available = None;
+
+            engine.write_config(&config)?;
+
+            Ok(CliResponse { msg, data: None })
+        }
     }
 }
