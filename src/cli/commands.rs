@@ -27,26 +27,50 @@ use crate::{
 pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
     let options = Options::parse();
 
+    let sprout_home = engine.get_home();
+    engine.ensure_home()?;
+
     let logo = format!(
-        r"                         
+        r"
           +++++          
           ++ ++          
    +++++  +++++  +++++     {}
   ++  ++    +    ++  ++    {}
    ++++++   +   ++++++     {}
-       +++  +  +++       
+       +++  +  +++         
          +++++++         
           ++ ++          
           +++++          
                          ",
-        format!("Sprout {}", crate::PKG_VERSION).bold().green(),
+        format!(
+            "{} {}",
+            format!("Sprout {}", crate::PKG_VERSION).bold().green(),
+            match engine.get_update_version() {
+                Ok(version) => {
+                    if let Some(_) = version {
+                        "update available via `sprout update`"
+                            .italic()
+                            .yellow()
+                            .dimmed()
+                    } else {
+                        "".to_string().normal()
+                    }
+                }
+                Err(e) => {
+                    format!("Could not check for updates: {}", e)
+                        .red()
+                        .italic()
+                        .dimmed()
+                }
+            }
+        ),
         "Content and database seeding for WordPress"
             .white()
             .bold()
             .dimmed(),
         format!("{} | https://github.com/talss89/sprout", crate::TARGET)
             .white()
-            .dimmed(),
+            .dimmed()
     );
     eprintln!("{:^26}", logo.green());
 
@@ -89,23 +113,6 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
             }
         })
         .init();
-
-    let sprout_home = engine.get_home();
-    engine.ensure_home()?;
-
-    match engine.get_update_version() {
-        Ok(version) => {
-            if let Some(version) = version {
-                warn!(
-                    "An update is available - {}. Run `sprout update` to update.",
-                    version.bold().green()
-                )
-            }
-        }
-        Err(e) => {
-            warn!("Could not check for updates: {}", e);
-        }
-    };
 
     std::env::set_current_dir(&options.path).map_err(|_| {
         anyhow::anyhow!(
