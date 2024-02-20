@@ -1,16 +1,28 @@
+use std::time::SystemTime;
 use std::{borrow::Cow, env, fs, path::PathBuf};
 
 use log::info;
+use self_update::cargo_crate_version;
 use serde::{Deserialize, Serialize};
 
 use regex::Captures;
 use regex::Regex;
+
+use crate::{CFG_OS, CFG_TARGET_ARCH};
+
+fn unix_epoch() -> SystemTime {
+    SystemTime::UNIX_EPOCH
+}
 
 /// Describes the sprout-config.yaml file, which stores information on how the current user has configured Sprout.
 #[derive(Serialize, Deserialize)]
 pub struct SproutConfig {
     pub stash_key: String,
     pub default_repo: String,
+    #[serde(default = "unix_epoch")]
+    pub last_update_check: SystemTime,
+    #[serde(default)]
+    pub update_available: Option<String>,
 }
 
 /// Represents core Sprout state and helper functions
@@ -51,6 +63,8 @@ impl Engine {
             self.write_config(&SproutConfig {
                 stash_key: "".to_string(),
                 default_repo: "".to_string(),
+                last_update_check: SystemTime::UNIX_EPOCH, // We haven't ever checked!
+                update_available: None,
             })?;
         }
 
@@ -68,6 +82,49 @@ impl Engine {
             self.get_home().join("sprout-config.yaml"),
             serde_yaml::to_string(config)?,
         )?)
+    }
+
+    pub fn should_check_for_updates(&self) -> anyhow::Result<bool> {
+        let config = self.get_config()?;
+
+        if config.last_update_check.elapsed().unwrap().as_secs() >= 86400 {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
+    pub fn check_for_updates(&self) -> anyhow::Result<Option<String>> {
+        let releases = self_update::backends::github::ReleaseList::configure()
+            .repo_owner("talss89")
+            .repo_name("sprout")
+            .with_target(&format!("{}-{}", CFG_OS, CFG_TARGET_ARCH))
+            .build()?
+            .fetch()?;
+
+        Ok(match releases.first() {
+            Some(release) => {
+                if self_update::version::bump_is_greater(cargo_crate_version!(), &release.version)?
+                {
+                    Some(release.version.clone())
+                } else {
+                    None
+                }
+            }
+            None => None,
+        })
+    }
+
+    pub fn get_update_version(&self) -> anyhow::Result<Option<String>> {
+        let mut config = self.get_config()?;
+
+        if self.should_check_for_updates()? {
+            config.update_available = self.check_for_updates()?;
+            config.last_update_check = SystemTime::now();
+            self.write_config(&config)?;
+        }
+
+        Ok(config.update_available)
     }
 }
 
