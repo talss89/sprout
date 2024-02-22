@@ -350,32 +350,17 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
 
             let (_, definition) = RepositoryDefinition::get(engine, &project.config.repo)?;
 
-            if !args.no_stash {
-                warn!("This command is destructive. Stashing your database and uploads locally.");
-                let stash = Stash::new(engine, engine.get_stash_path())?;
-                stash.stash(&project)?;
-            } else {
-                let confirmation = Confirm::with_theme(&CliTheme::default())
-                    .with_prompt("This command is destructive, and stashing has been disabled. Do you want to continue?")
-                    .interact()
-                    .unwrap();
-
-                if confirmation {
-                    warn!("Continuing without stashing. This will overwrite your database and uploads directory.");
-                } else {
-                    return Ok(CliResponse {
-                        msg: "Aborted by user, but no error".to_string(),
-                        data: None,
-                    });
-                }
-            }
-
             let repo = project.open_repo(&definition.repo_key)?;
 
             let snapshot = match args.snapshot_id {
                 None => project.get_active_snapshot(&repo)?,
                 Some(snapshot_id) => {
-                    let snap = Snapshot::from_snapshot_id(&repo.repo, Id::from_hex(&snapshot_id)?)?;
+                    let snap = Snapshot::from_snapshot_id(
+                        &repo.repo,
+                        Id::from_hex(&snapshot_id)
+                            .map_err(|_| anyhow::anyhow!("Could not find snapshot"))?,
+                    )
+                    .map_err(|_| anyhow::anyhow!("Could not find snapshot"))?;
 
                     match &project.unique_hash {
                         Some(hash) => {
@@ -395,6 +380,26 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
                     snap
                 }
             };
+
+            if !args.no_stash {
+                warn!("This command is destructive. Stashing your database and uploads locally.");
+                let stash = Stash::new(engine, engine.get_stash_path())?;
+                stash.stash(&project)?;
+            } else {
+                let confirmation = Confirm::with_theme(&CliTheme::default())
+                    .with_prompt("This command is destructive, and stashing has been disabled. Do you want to continue?")
+                    .interact()
+                    .unwrap();
+
+                if confirmation {
+                    warn!("Continuing without stashing. This will overwrite your database and uploads directory.");
+                } else {
+                    return Ok(CliResponse {
+                        msg: "Aborted by user, but no error".to_string(),
+                        data: None,
+                    });
+                }
+            }
 
             project.restore_from_snapshot(&repo, &snapshot)?;
 
