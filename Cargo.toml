@@ -67,3 +67,6 @@ lto = false
 incremental = true
 codegen-units = 256
 rpath = false
+
+[patch.crates-io]
+zstd-sys = { git = "https://github.com/harana-oss/zstd-rs.git" }
