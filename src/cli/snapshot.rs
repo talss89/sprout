@@ -3,14 +3,17 @@ use indicatif::HumanBytes;
 use std::io::Write;
 use tabwriter::TabWriter;
 
-use crate::snapshot::Snapshot;
+use crate::{project::Project, snapshot::Snapshot};
 /// Generates a table showing all snapshots passed in
-pub fn project_table(snapshots: &Vec<Snapshot>) -> anyhow::Result<String> {
+pub fn project_table(
+    snapshots: &Vec<Snapshot>,
+    project: Option<&Project>,
+) -> anyhow::Result<String> {
     let mut tw = TabWriter::new(vec![]).ansi(true);
 
     write!(
         &mut tw,
-        "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+        "\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
         "ID".dimmed().bold(),
         "Branch".dimmed().bold(),
         "Files".dimmed().bold(),
@@ -28,7 +31,20 @@ pub fn project_table(snapshots: &Vec<Snapshot>) -> anyhow::Result<String> {
             &mut tw,
             "{}",
             format!(
-                "{}\t{}\t{}\t{}\t{}\t{}\n",
+                "{:^8}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+                match project {
+                    Some(project) => match project.config.snapshot {
+                        None => "".normal(),
+                        Some(snapshot) => {
+                            if snapshot == stash.id {
+                                "active ▶".green().dimmed().bold()
+                            } else {
+                                "".normal()
+                            }
+                        }
+                    },
+                    None => "".normal(),
+                },
                 stash.id.to_hex().to_string(),
                 stash.get_branch().unwrap_or("???".to_string()),
                 stash.get_total_files(),

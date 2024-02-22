@@ -401,7 +401,10 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
                 warn!("{}", err);
             }
 
-            eprint!("\n{}", crate::cli::snapshot::project_table(&snapshots)?);
+            eprint!(
+                "\n{}",
+                crate::cli::snapshot::project_table(&snapshots, Some(&project))?
+            );
 
             Ok(CliResponse {
                 msg: format!(
@@ -487,7 +490,7 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
                         project.config.name
                     );
 
-                    eprint!("\n{}", crate::cli::snapshot::project_table(&stashes)?);
+                    eprint!("\n{}", crate::cli::snapshot::project_table(&stashes, None)?);
 
                     Ok(CliResponse {
                         msg: format!("Listed all local stashes for {}", project.config.name),
