@@ -14,9 +14,7 @@ pub fn definition_table(
     write!(
         &mut tw,
         "{}",
-        "Default?\tRepository Label\tRepository Path\n"
-            .dimmed()
-            .bold()
+        "\tRepository Label\tRepository Path\n".dimmed().bold()
     )?;
 
     for (label, definition) in defs {
@@ -26,7 +24,8 @@ pub fn definition_table(
                 &mut tw,
                 "{}\n",
                 format!(
-                    "------->\t{}\t{}",
+                    "{:^8}\t{}\t{}",
+                    "deflt. ▶".green().dimmed(),
                     label,
                     format!("{}", RepositoryDefinition::display_path(definition)?)
                 )
