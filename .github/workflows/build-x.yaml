@@ -18,7 +18,7 @@ jobs:
             name: sprout-linux-x86_64.tar.gz
             command: build
           - release_for: linux-aarch64
-            os: macos-14
+            os: ubuntu-20.04
             target: aarch64-unknown-linux-musl
             bin: sprout
             name: sprout-linux-aarch64.tar.gz
@@ -43,7 +43,7 @@ jobs:
         with:
           packages: musl-tools # provides musl-gcc
           version: 1.0  
-        if: startsWith( matrix.platform.release_for, 'linux' )
+        if: startsWith( matrix.platform.os, 'ubuntu' )
       - name: Build binary
         uses: houseabsolute/actions-rust-cross@v0
         with:
