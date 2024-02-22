@@ -50,6 +50,10 @@ pub struct SeedArgs {
     /// Do not stash current database and uploads before seeding
     #[arg(short, long)]
     pub no_stash: bool,
+
+    /// Restore a particular snapshot ID
+    #[arg(index = 1)]
+    pub snapshot_id: Option<String>,
 }
 
 #[derive(Args, Debug)]

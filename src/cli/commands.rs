@@ -17,6 +17,7 @@ use crate::{
     progress::SproutProgressBar,
     project::Project,
     repo::{definition::RepositoryDefinition, ProjectRepository},
+    snapshot::Snapshot,
     stash::Stash,
     theme::CliTheme,
     CFG_OS, CFG_TARGET_ARCH,
@@ -371,9 +372,33 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
 
             let repo = project.open_repo(&definition.repo_key)?;
 
-            let snapshot = project.get_active_snapshot(&repo)?;
+            let snapshot = match args.snapshot_id {
+                None => project.get_active_snapshot(&repo)?,
+                Some(snapshot_id) => {
+                    let snap = Snapshot::from_snapshot_id(&repo.repo, Id::from_hex(&snapshot_id)?)?;
+
+                    match &project.unique_hash {
+                        Some(hash) => {
+                            if snap.get_project_identity_hash()? != *hash {
+                                warn!("{} does not belong to this project!", snapshot_id);
+
+                                if args.no_stash {
+                                    return Err(anyhow::anyhow!("Restoring from a snapshot that does not belong to this project is not allowed when --no-stash is passed."));
+                                }
+                            }
+                        }
+                        None => {
+                            warn!("Unable to determine current project uniqueness digest. The restored snapshot may not belong to this project.");
+                        }
+                    };
+
+                    snap
+                }
+            };
 
             project.restore_from_snapshot(&repo, &snapshot)?;
+
+            project.update_snapshot_id(snapshot.id, snapshot.get_branch()?)?;
 
             Ok(CliResponse {
                 msg: "Content and database seeded".to_string(),
