@@ -43,7 +43,7 @@ jobs:
         with:
           packages: musl-tools # provides musl-gcc
           version: 1.0  
-        if: startsWith( matrix.platform.os, 'ubuntu' )
+        if: startsWith( matrix.platform.release_for, 'linux' )
       - name: Build binary
         uses: houseabsolute/actions-rust-cross@v0
         with:
