@@ -18,7 +18,7 @@ jobs:
             name: sprout-linux-x86_64.tar.gz
             command: build
           - release_for: linux-aarch64
-            os: ubuntu-20.04
+            os: macos-14
             target: aarch64-unknown-linux-musl
             bin: sprout
             name: sprout-linux-aarch64.tar.gz
