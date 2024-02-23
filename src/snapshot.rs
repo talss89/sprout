@@ -100,6 +100,10 @@ impl Snapshot {
         self.snapshot.hostname.clone()
     }
 
+    pub fn get_label(&self) -> String {
+        self.snapshot.label.clone()
+    }
+
     pub fn get_total_files(&self) -> u64 {
         if self.snapshot.summary.is_none() {
             return 0u64;

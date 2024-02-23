@@ -13,7 +13,8 @@ pub fn project_table(
 
     write!(
         &mut tw,
-        "\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+        "\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+        "Label".dimmed().bold(),
         "ID".dimmed().bold(),
         "Branch".dimmed().bold(),
         "Files".dimmed().bold(),
@@ -31,7 +32,7 @@ pub fn project_table(
             &mut tw,
             "{}",
             format!(
-                "{:^8}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+                "{:^8}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
                 match project {
                     Some(project) => match project.config.snapshot {
                         None => "".normal(),
@@ -45,6 +46,7 @@ pub fn project_table(
                     },
                     None => "".normal(),
                 },
+                stash.get_label(),
                 stash.id.to_hex().to_string(),
                 stash.get_branch().unwrap_or("???".to_string()),
                 stash.get_total_files(),

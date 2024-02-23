@@ -82,7 +82,7 @@ impl Stash {
         info!("Stashing {}...", project.config.name);
         let repo = self.open_stash(project)?;
 
-        let snapshot = repo.snapshot(true)?;
+        let snapshot = repo.snapshot(true, None, None)?;
 
         info!(
             "Stashed with snapshot id {}",

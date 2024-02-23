@@ -331,7 +331,7 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
 
             info!("Starting snapshot...");
 
-            let snapshot = repo.snapshot(false)?;
+            let snapshot = repo.snapshot(false, args.label, args.desc)?;
 
             project.update_snapshot_id(snapshot.id, project.config.branch.to_owned())?;
 

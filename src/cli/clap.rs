@@ -43,6 +43,14 @@ pub enum SubCommand {
 pub struct SnapArgs {
     /// Create a snapshot on a specific content branch
     pub branch: Option<String>,
+
+    #[arg(short, long)]
+    /// Add a label to the snapshot
+    pub label: Option<String>,
+
+    #[arg(short, long)]
+    /// Add a description to the snapshot
+    pub desc: Option<String>,
 }
 
 #[derive(Args, Debug)]

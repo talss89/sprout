@@ -156,7 +156,7 @@ fn test_project_snapshot() -> TestResult {
     )?;
 
     let repo = project.open_repo("TEST")?;
-    let snapshot = repo.snapshot(true)?;
+    let snapshot = repo.snapshot(true, None, None)?;
 
     assert!(
         snapshot
@@ -183,7 +183,7 @@ fn test_project_snapshot() -> TestResult {
         size_limit - (5 * 1024 * 1024)
     );
 
-    let snapshot = repo.snapshot(true)?;
+    let snapshot = repo.snapshot(true, None, None)?;
 
     let (snapshots, errors) = project.get_all_snapshots(&repo)?;
 
@@ -231,7 +231,7 @@ fn test_snapshot_branching() -> TestResult {
     )?;
 
     let repo = project.open_repo("TEST")?;
-    let snapshot = repo.snapshot(true)?;
+    let snapshot = repo.snapshot(true, None, None)?;
 
     assert_eq!(
         snapshot.get_branch()?,
@@ -242,7 +242,7 @@ fn test_snapshot_branching() -> TestResult {
     project.config.branch = "other-branch".to_string();
 
     let repo = project.open_repo("TEST")?;
-    let new_snapshot = repo.snapshot(false)?;
+    let new_snapshot = repo.snapshot(false, None, None)?;
 
     assert_eq!(
         new_snapshot.get_branch()?,
@@ -300,9 +300,9 @@ fn test_project_snapshot_respected() -> TestResult {
 
     let repo = project.open_repo("TEST")?;
 
-    let snapshot = repo.snapshot(true)?;
-    let snapshot_2 = repo.snapshot(true)?;
-    let snapshot_3 = repo.snapshot(true)?;
+    let snapshot = repo.snapshot(true, None, None)?;
+    let snapshot_2 = repo.snapshot(true, None, None)?;
+    let snapshot_3 = repo.snapshot(true, None, None)?;
 
     let (snapshots, errors) = project.get_all_snapshots(&repo)?;
 
@@ -369,7 +369,7 @@ fn test_seeding() -> TestResult {
     )?;
 
     let repo = project.open_repo("TEST")?;
-    let snapshot = repo.snapshot(true)?;
+    let snapshot = repo.snapshot(true, None, None)?;
 
     assert_eq!(
         snapshot.get_total_files(),
@@ -422,7 +422,7 @@ fn test_seeding_intersect() -> TestResult {
     )?;
 
     let repo = project.open_repo("TEST")?;
-    let snapshot_a = repo.snapshot(true)?;
+    let snapshot_a = repo.snapshot(true, None, None)?;
 
     assert_eq!(
         snapshot_a.get_total_files(),
@@ -440,7 +440,7 @@ fn test_seeding_intersect() -> TestResult {
         "Fixture is missing uploads/4.txt"
     );
 
-    let snapshot_b = repo.snapshot(true)?;
+    let snapshot_b = repo.snapshot(true, None, None)?;
 
     assert_eq!(
         snapshot_b.get_total_files(),

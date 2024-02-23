@@ -178,7 +178,12 @@ impl ProjectRepository {
         Ok(snap)
     }
 
-    pub fn snapshot(&self, automatic_parent: bool) -> anyhow::Result<Snapshot> {
+    pub fn snapshot(
+        &self,
+        automatic_parent: bool,
+        label: Option<String>,
+        desc: Option<String>,
+    ) -> anyhow::Result<Snapshot> {
         let db_snapshot = self.snapshot_db(&self.repo, automatic_parent)?;
         let uploads_snapshot =
             self.snapshot_uploads(&self.repo, db_snapshot.id, automatic_parent)?;
@@ -197,6 +202,8 @@ impl ProjectRepository {
                 .as_str(),
             )?
             .host(self.project.config.name.to_owned())
+            .label(label)
+            .description(desc)
             .to_snapshot()?;
 
         let snapshots = &[db_snapshot, uploads_snapshot];
