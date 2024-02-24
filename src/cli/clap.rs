@@ -37,6 +37,8 @@ pub enum SubCommand {
     Ls,
     /// Update Sprout to latest release
     Update,
+    /// Describe a snapshot
+    Describe(DescribeArgs),
 }
 
 #[derive(Args, Debug)]
@@ -135,6 +137,13 @@ pub struct UnStashArgs {
 #[derive(Args, Debug)]
 pub struct StashDropArgs {
     /// Drop a particular stash snapshot by ID. This will not check project or branch constraints - use with caution.
+    #[arg(index = 1)]
+    pub snapshot_id: String,
+}
+
+#[derive(Args, Debug)]
+pub struct DescribeArgs {
+    /// Restore a particular snapshot ID
     #[arg(index = 1)]
     pub snapshot_id: String,
 }

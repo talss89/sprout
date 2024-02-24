@@ -16,7 +16,7 @@ use crate::{
     facts::wordpress::WordPress,
     progress::SproutProgressBar,
     project::Project,
-    repo::{definition::RepositoryDefinition, ProjectRepository},
+    repo::{definition::RepositoryDefinition, ProjectRepository, RusticRepo, RusticRepoFactory},
     snapshot::Snapshot,
     stash::Stash,
     theme::CliTheme,
@@ -635,6 +635,28 @@ pub fn run(engine: &Engine) -> anyhow::Result<CliResponse> {
             engine.write_config(&config)?;
 
             Ok(CliResponse { msg, data: None })
+        }
+        SubCommand::Describe(args) => {
+            let config = engine.get_config()?;
+
+            let (_, definition) = RepositoryDefinition::get(engine, &config.default_repo)?;
+            let repo_opts = RepositoryOptions::default().password(&definition.repo_key);
+
+            let repo = RusticRepo::<()>::open_repo(definition.repo, repo_opts)?;
+
+            let snapshot = Snapshot::from_snapshot_id(
+                &repo,
+                Id::from_hex(&args.snapshot_id)
+                    .map_err(|_| anyhow::anyhow!("Could not find snapshot"))?,
+            )
+            .map_err(|_| anyhow::anyhow!("Could not find snapshot"))?;
+
+            eprint!("\n{}", crate::cli::snapshot::snapshot_describe(snapshot)?);
+
+            Ok(CliResponse {
+                msg: "".to_string(),
+                data: None,
+            })
         }
     }
 }

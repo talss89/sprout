@@ -104,6 +104,10 @@ impl Snapshot {
         self.snapshot.label.clone()
     }
 
+    pub fn get_description(&self) -> Option<String> {
+        self.snapshot.description.clone()
+    }
+
     pub fn get_total_files(&self) -> u64 {
         if self.snapshot.summary.is_none() {
             return 0u64;

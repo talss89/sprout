@@ -79,3 +79,48 @@ pub fn project_table(
 
     Ok(String::from_utf8(tw.into_inner().unwrap()).unwrap())
 }
+
+pub fn snapshot_describe(snapshot: Snapshot) -> anyhow::Result<String> {
+    let mut tw = TabWriter::new(vec![]).ansi(true);
+
+    write!(
+        &mut tw,
+        "{}\t{}\n",
+        "ID:".dimmed(),
+        snapshot.id.to_hex().to_string()
+    )?;
+    write!(
+        &mut tw,
+        "{}\t{}\n",
+        "Project:".dimmed(),
+        snapshot.get_project_name()
+    )?;
+    write!(&mut tw, "{}\t{}\n", "Label:".dimmed(), snapshot.get_label())?;
+    write!(
+        &mut tw,
+        "{}\t{}\n",
+        "Branch:".dimmed(),
+        snapshot.get_branch()?
+    )?;
+    write!(
+        &mut tw,
+        "{}\t{}\n",
+        "File Count:".dimmed(),
+        snapshot.get_total_files()
+    )?;
+    write!(
+        &mut tw,
+        "{}\t{}\n",
+        "Total Size:".dimmed(),
+        HumanBytes(snapshot.get_total_bytes())
+    )?;
+
+    write!(
+        &mut tw,
+        "{}\n\n{}\n",
+        "Description:".dimmed(),
+        snapshot.get_description().unwrap_or("-None-".to_string())
+    )?;
+    tw.flush().unwrap();
+    Ok(String::from_utf8(tw.into_inner().unwrap()).unwrap())
+}
